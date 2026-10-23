@@ -15,20 +15,33 @@ async function main() {
     datasourceUrl: targetDbUrl,
   });
 
-  const jsonPath = path.resolve(process.cwd(), '../../data/sqlite_export.json');
-  if (!fs.existsSync(jsonPath)) {
-    console.error(`Export file not found at: ${jsonPath}`);
+  const candidates = [
+    path.resolve(__dirname, '../../../../data/sqlite_export.json'),
+    path.resolve(process.cwd(), 'data/sqlite_export.json'),
+    path.resolve(process.cwd(), '../../data/sqlite_export.json'),
+  ];
+  const jsonPath = candidates.find((p) => fs.existsSync(p));
+  if (!jsonPath) {
+    console.error('Export file sqlite_export.json not found. Looked in:', candidates);
     process.exit(1);
   }
+  console.log(`Using data source: ${jsonPath}`);
 
   const data = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
 
+  console.log('--- Cleaning any initial empty records in Neon ---');
+  await prisma.transaction.deleteMany();
+  await prisma.person.deleteMany();
+  await prisma.account.deleteMany();
+  await prisma.category.deleteMany();
+  await prisma.paymentMethod.deleteMany();
+  await prisma.contactInvite.deleteMany();
+  await prisma.user.deleteMany();
+
   console.log('--- 1. Importing Users ---');
   for (const u of data.User) {
-    await prisma.user.upsert({
-      where: { id: u.id },
-      update: {},
-      create: {
+    await prisma.user.create({
+      data: {
         id: u.id,
         name: u.name,
         email: u.email,
