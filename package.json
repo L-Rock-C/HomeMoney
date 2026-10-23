@@ -1,0 +1,20 @@
+{
+  "name": "homemoney",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=@homemoney/api",
+    "dev:web": "npm run dev --workspace=@homemoney/web",
+    "build": "npm run build --workspaces",
+    "db:migrate": "npm run db:migrate --workspace=@homemoney/api",
+    "db:seed": "npm run db:seed --workspace=@homemoney/api",
+    "db:studio": "npm run db:studio --workspace=@homemoney/api"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,138 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String          @id @default(uuid())
+  name         String
+  email        String          @unique
+  passwordHash String
+  avatar       String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  accounts        Account[]        @relation("UserAccounts")
+  categories      Category[]       @relation("UserCategories")
+  people          Person[]         @relation("UserPeople")
+  paymentMethods  PaymentMethod[]  @relation("UserPaymentMethods")
+  transactions    Transaction[]    @relation("UserTransactions")
+
+  linkedPeople    Person[]         @relation("LinkedUser")
+  sentInvites     ContactInvite[]  @relation("SentInvites")
+  receivedInvites ContactInvite[]  @relation("ReceivedInvites")
+}
+
+model Account {
+  id             String        @id @default(uuid())
+  name           String
+  type           String        @default("CHECKING") // CHECKING, SAVINGS, WALLET, INVESTMENT
+  color          String?
+  initialBalance Float         @default(0)
+  isArchived     Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  userId         String?
+  user           User?         @relation("UserAccounts", fields: [userId], references: [id], onDelete: Cascade)
+
+  transactions   Transaction[]
+}
+
+model Category {
+  id           String        @id @default(uuid())
+  name         String
+  icon         String?
+  color        String?
+  isIncome     Boolean       @default(false)
+  isArchived   Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  userId       String?
+  user         User?         @relation("UserCategories", fields: [userId], references: [id], onDelete: Cascade)
+
+  transactions Transaction[]
+}
+
+model ContactInvite {
+  id            String   @id @default(uuid())
+  senderId      String
+  sender        User     @relation("SentInvites", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverEmail String
+  receiverId    String?
+  receiver      User?    @relation("ReceivedInvites", fields: [receiverId], references: [id], onDelete: SetNull)
+  status        String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  personId      String?  // The sender's Person record representing this contact
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Person {
+  id           String        @id @default(uuid())
+  name         String
+  notes        String?
+  isArchived   Boolean       @default(false)
+
+  // Owner user
+  userId       String?
+  user         User?         @relation("UserPeople", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Link to real registered User (e.g. Lelê is linked to real user account)
+  linkedUserId String?
+  linkedUser   User?         @relation("LinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+}
+
+model PaymentMethod {
+  id         String   @id @default(uuid())
+  name       String
+  icon       String?
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  userId     String?
+  user       User?    @relation("UserPaymentMethods", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id                  String    @id @default(uuid())
+  description         String
+  amount              Float
+  type                String    // INCOME, EXPENSE, TRANSFER, REIMBURSEMENT
+  purchaseDate        DateTime
+  dueDate             DateTime
+  paid                Boolean   @default(false)
+  paymentMethod       String    @default("CREDIT") // CREDIT, DEBIT, PIX, PIX_CREDIT, CASH, OTHER
+  notes               String?
+  
+  // Installments
+  currentInstallment  Int?
+  totalInstallments   Int?      @default(1)
+  installmentGroupId  String?
+
+  // Owner user
+  userId              String?
+  user                User?     @relation("UserTransactions", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  accountId           String
+  account             Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  categoryId          String
+  category            Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  personId            String?
+  person              Person?   @relation(fields: [personId], references: [id], onDelete: SetNull)
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
