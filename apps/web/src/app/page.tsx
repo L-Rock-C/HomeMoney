@@ -55,6 +55,12 @@ import { TransactionModal } from '../components/TransactionModal';
 import { SettleModal } from '../components/SettleModal';
 import { ManagerModal } from '../components/ManagerModal';
 import { ProfileContactsView } from '../components/ProfileContactsView';
+import { CategoryDonutChart, MonthlyBarChart } from '../components/FinanceCharts';
+
+const getCurrentMonthKey = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
 
 export default function HomePage() {
   const router = useRouter();
@@ -77,7 +83,7 @@ export default function HomePage() {
 
   // Date Filter states
   const [filterMode, setFilterMode] = useState<'MONTH' | 'RANGE'>('MONTH');
-  const [selectedMonth, setSelectedMonth] = useState('2026-04');
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey());
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
@@ -179,9 +185,11 @@ export default function HomePage() {
       setPaymentMethods(methods);
 
       const months = monthsData.map((m: any) => m.month);
-      setAvailableMonths(months);
+      const currentM = getCurrentMonthKey();
+      const allMonths = Array.from(new Set([...months, currentM])).sort();
+      setAvailableMonths(allMonths);
 
-      const initialMonth = months.includes(selectedMonth) ? selectedMonth : months[months.length - 1] || '2026-04';
+      const initialMonth = currentM;
       setSelectedMonth(initialMonth);
 
       await fetchTransactionsForFilter(initialMonth, '', '');
@@ -896,46 +904,52 @@ export default function HomePage() {
           {/* ========================================================================= */}
           {activeTab === 'DASHBOARD' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Categorias */}
-              <div className="lg:col-span-2 p-6 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Despesas por Categoria</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Distribuição no período de {selectedMonth}
-                    </p>
+              {/* Gráficos de Visão Geral (Colunas & Setores) */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* 1. Gráfico de Colunas: Comparativo Mensal */}
+                <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-emerald-500" />
+                        Evolução Financeira (Receitas, Despesas e Saldo)
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Comparativo entre os meses registrados com seleção rápida de período
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                    Total: {formatBRL(categoriesReport.grandTotal)}
-                  </span>
+
+                  <MonthlyBarChart
+                    monthlyReports={monthlyReports}
+                    selectedMonth={selectedMonth}
+                    onSelectMonth={handleMonthSelect}
+                    formatBRL={formatBRL}
+                  />
                 </div>
 
-                <div className="space-y-3 pt-2">
-                  {categoriesReport.categories.map((c: any) => (
-                    <div key={c.categoryId} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs font-medium">
-                        <span className="text-slate-700 dark:text-slate-200 flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                          {c.categoryName} <span className="text-slate-400 font-normal">({c.count} transações)</span>
-                        </span>
-                        <span className="text-slate-900 dark:text-slate-200 font-semibold">
-                          {formatBRL(c.total)}{' '}
-                          <span className="text-slate-400 font-normal">({c.percentage}%)</span>
-                        </span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500"
-                          style={{ width: `${Math.min(c.percentage, 100)}%` }}
-                        />
-                      </div>
+                {/* 2. Gráfico de Setores: Despesas por Categoria */}
+                <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <PieChart className="w-4 h-4 text-emerald-500" />
+                        Despesas por Categoria (Gráfico de Setores)
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Distribuição proporcional no período de {selectedMonth}
+                      </p>
                     </div>
-                  ))}
-                  {categoriesReport.categories.length === 0 && (
-                    <p className="text-xs text-slate-500 text-center py-4">
-                      Nenhuma despesa registrada para o período selecionado.
-                    </p>
-                  )}
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                      Total: {formatBRL(categoriesReport.grandTotal)}
+                    </span>
+                  </div>
+
+                  <CategoryDonutChart
+                    categories={categoriesReport.categories}
+                    grandTotal={categoriesReport.grandTotal}
+                    formatBRL={formatBRL}
+                  />
                 </div>
               </div>
 
