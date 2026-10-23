@@ -12,6 +12,9 @@ const config: Config = {
       colors: {
         background: 'var(--background)',
         foreground: 'var(--foreground)',
+        slate: {
+          850: '#131b2e',
+        },
         brand: {
           50: '#f0fdf4',
           100: '#dcfce7',

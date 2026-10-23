@@ -141,7 +141,7 @@ export default function LoginPage() {
       {/* Main Card Container */}
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-2xl shadow-slate-200/50 dark:shadow-black/50 overflow-hidden z-10 backdrop-blur-xl">
         {/* Header */}
-        <div className="p-8 pb-6 text-center border-b border-slate-100 dark:border-slate-800/60 bg-gradient-to-b from-slate-50/50 to-transparent dark:from-slate-850/50">
+        <div className="p-8 pb-6 text-center border-b border-slate-100 dark:border-slate-800/60 bg-gradient-to-b from-slate-50/50 to-transparent dark:from-slate-900/50">
           <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/25 mb-4 transform hover:scale-105 transition-transform">
             <Wallet className="w-7 h-7 text-slate-950" />
           </div>

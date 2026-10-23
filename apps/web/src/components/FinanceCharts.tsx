@@ -169,7 +169,7 @@ export function CategoryDonutChart({ categories, grandTotal, formatBRL }: Catego
               className={`p-2 rounded-xl transition cursor-pointer border ${
                 isHovered
                   ? 'bg-slate-100/80 dark:bg-slate-800/80 border-slate-300 dark:border-slate-700 shadow-sm'
-                  : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-slate-850'
+                  : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60'
               }`}
             >
               <div className="flex items-center justify-between text-xs font-medium mb-1">
@@ -340,7 +340,7 @@ export function MonthlyBarChart({
       </div>
 
       {/* Dynamic Hover Details Bar */}
-      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-850/60 border border-slate-200/70 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200/70 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
         {hoveredMonth ? (
           <>
             <span className="font-bold text-slate-800 dark:text-white flex items-center gap-1.5">

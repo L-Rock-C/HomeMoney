@@ -75,17 +75,14 @@ export function ProfileContactsView({
   const [linkError, setLinkError] = useState('');
   const [linkSuccess, setLinkSuccess] = useState('');
 
-  // New Contact Modal state
-  const [isNewContactOpen, setIsNewContactOpen] = useState(false);
-  const [newContactName, setNewContactName] = useState('');
-  const [newContactNotes, setNewContactNotes] = useState('');
-  const [newContactEmail, setNewContactEmail] = useState('');
+  // Contact Modal state (Unified for Create & Edit)
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [editingPerson, setEditingPerson] = useState<any | null>(null);
+  const [contactName, setContactName] = useState('');
+  const [contactNotes, setContactNotes] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
   const [contactError, setContactError] = useState('');
-
-  // Edit Contact inline state
-  const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
-  const [editPersonName, setEditPersonName] = useState('');
-  const [editPersonNotes, setEditPersonNotes] = useState('');
+  const [contactLoading, setContactLoading] = useState(false);
 
   // Load invites
   const loadInvites = async () => {
@@ -207,30 +204,100 @@ export function ProfileContactsView({
     }
   };
 
-  // Handle Create Person
-  const handleCreateContact = async (e: React.FormEvent) => {
+  // Open Contact Modal for Creation
+  const handleOpenCreateContact = () => {
+    setEditingPerson(null);
+    setContactName('');
+    setContactNotes('');
+    setContactEmail('');
+    setContactError('');
+    setIsContactModalOpen(true);
+  };
+
+  // Open Contact Modal for Editing
+  const handleOpenEditContact = (person: any) => {
+    setEditingPerson(person);
+    setContactName(person.name || '');
+    setContactNotes(person.notes || '');
+    setContactEmail(person.linkedUser?.email || '');
+    setContactError('');
+    setIsContactModalOpen(true);
+  };
+
+  // Handle Save Contact (Create or Edit)
+  const handleSubmitContact = async (e: React.FormEvent) => {
     e.preventDefault();
     setContactError('');
-    try {
-      if (!newContactName.trim()) throw new Error('Nome do contato é obrigatório.');
-      const created = await createPerson({
-        name: newContactName.trim(),
-        notes: newContactNotes.trim() || null,
-      });
+    setContactLoading(true);
 
-      // If email provided, link immediately
-      if (newContactEmail.trim() && created?.id) {
-        await linkPersonToUser(created.id, newContactEmail.trim()).catch(() => {});
+    try {
+      if (!contactName.trim()) {
+        throw new Error('O nome do contato é obrigatório.');
       }
 
-      setNewContactName('');
-      setNewContactNotes('');
-      setNewContactEmail('');
-      setIsNewContactOpen(false);
+      if (editingPerson) {
+        // 1. Atualizar dados cadastrais
+        await updatePerson(editingPerson.id, {
+          name: contactName.trim(),
+          notes: contactNotes.trim() || null,
+        });
+
+        // 2. Tratar vinculação de usuário real
+        const prevEmail = (editingPerson.linkedUser?.email || '').trim().toLowerCase();
+        const nextEmail = contactEmail.trim().toLowerCase();
+
+        if (prevEmail !== nextEmail) {
+          if (!nextEmail && prevEmail) {
+            // E-mail limpo: desvincular
+            await unlinkPerson(editingPerson.id);
+          } else if (nextEmail) {
+            // Novo e-mail fornecido: vincular / convidar
+            await linkPersonToUser(editingPerson.id, nextEmail);
+          }
+        }
+      } else {
+        // Criar novo contato
+        const created = await createPerson({
+          name: contactName.trim(),
+          notes: contactNotes.trim() || null,
+        });
+
+        if (contactEmail.trim() && created?.id) {
+          await linkPersonToUser(created.id, contactEmail.trim().toLowerCase()).catch(() => {});
+        }
+      }
+
+      setIsContactModalOpen(false);
+      setEditingPerson(null);
+      setContactName('');
+      setContactNotes('');
+      setContactEmail('');
       onRefreshData();
       loadInvites();
     } catch (err: any) {
-      setContactError(err.message || 'Erro ao cadastrar contato.');
+      setContactError(err.message || 'Erro ao salvar contato.');
+    } finally {
+      setContactLoading(false);
+    }
+  };
+
+  // Handle Delete Contact
+  const handleDeleteContact = async (person: any) => {
+    if (person.netBalance && Math.abs(person.netBalance) > 0.009) {
+      alert(
+        `Não é possível excluir "${person.name}" porque há saldo pendente de ${formatBRL(
+          person.netBalance
+        )}. Faça a liquidação/acerto de contas antes.`
+      );
+      return;
+    }
+    if (confirm(`Tem certeza que deseja excluir o contato "${person.name}"?`)) {
+      try {
+        await deletePerson(person.id);
+        onRefreshData();
+      } catch (err: any) {
+        alert(err.message || 'Erro ao excluir contato');
+      }
     }
   };
 
@@ -314,7 +381,7 @@ export function ProfileContactsView({
       {subTab === 'CONTACTS' && (
         <div className="space-y-6">
           {/* Hero Explanatory Card */}
-          <div className="p-5 rounded-2xl bg-slate-100/60 dark:bg-slate-850/60 border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="p-5 rounded-2xl bg-slate-100/60 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5 max-w-2xl">
               <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 mt-0.5">
                 <Sparkles className="w-5 h-5" />
@@ -331,7 +398,7 @@ export function ProfileContactsView({
             </div>
 
             <button
-              onClick={() => setIsNewContactOpen(true)}
+              onClick={handleOpenCreateContact}
               className="py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center gap-2 whitespace-nowrap transition cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
@@ -386,7 +453,6 @@ export function ProfileContactsView({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {people.map((person) => {
               const isLinked = !!person.linkedUser || !!person.linkedUserId;
-              const isEditing = editingPersonId === person.id;
 
               return (
                 <div
@@ -407,72 +473,41 @@ export function ProfileContactsView({
                           {person.name.slice(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={editPersonName}
-                              onChange={(e) => setEditPersonName(e.target.value)}
-                              className="text-sm font-bold bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-0.5"
-                            />
-                          ) : (
-                            <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                              {person.name}
-                              {isLinked && (
-                                <span title="Vinculado a usuário real" className="inline-flex">
-                                  <Link2 className="w-3.5 h-3.5 text-emerald-500" />
-                                </span>
-                              )}
-                            </h4>
-                          )}
-                          <span className="text-[11px] text-slate-400 block">
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            {person.name}
+                            {isLinked && (
+                              <span title="Vinculado a usuário real" className="inline-flex">
+                                <Link2 className="w-3.5 h-3.5 text-emerald-500" />
+                              </span>
+                            )}
+                          </h4>
+                          <span className="text-[11px] text-slate-400 block line-clamp-1">
                             {person.notes || 'Sem observações'}
                           </span>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1">
-                        {isEditing ? (
-                          <>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  await updatePerson(person.id, { name: editPersonName });
-                                  setEditingPersonId(null);
-                                  onRefreshData();
-                                } catch (e: any) {
-                                  alert(e.message);
-                                }
-                              }}
-                              className="p-1 rounded text-emerald-500 hover:bg-emerald-500/10"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => setEditingPersonId(null)}
-                              className="p-1 rounded text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setEditingPersonId(person.id);
-                              setEditPersonName(person.name);
-                              setEditPersonNotes(person.notes || '');
-                            }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                            title="Editar Contato"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleOpenEditContact(person)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                          title="Editar Contato"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteContact(person)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
+                          title="Excluir Contato"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
 
                     {/* Financial Summary */}
-                    <div className="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-850/50 border border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
-                      <span className="text-slate-500 dark:text-slate-400">Saldo Pendente:</span>
+                    <div className="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
+                      <span className="text-slate-500 dark:text-slate-400 font-medium">Saldo Pendente:</span>
                       <span
                         className={`font-mono font-bold ${
                           person.netBalance > 0
@@ -498,29 +533,34 @@ export function ProfileContactsView({
                               {person.linkedUser?.name || 'Usuário Real'} ({person.linkedUser?.email || 'vinculado'})
                             </span>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleUnlink(person)}
-                            className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                            title="Desvincular usuário"
-                          >
-                            <Unlink className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditContact(person)}
+                              className="p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition"
+                              title="Editar contato e vínculo"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUnlink(person)}
+                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                              title="Desvincular usuário"
+                            >
+                              <Unlink className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       ) : (
-                        <div className="p-2 rounded-xl bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/50 dark:border-slate-800 flex items-center justify-between">
+                        <div className="p-2 rounded-xl bg-slate-100/60 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-800 flex items-center justify-between">
                           <span className="text-xs text-slate-500 dark:text-slate-400">
                             Contato local
                           </span>
                           <button
                             type="button"
-                            onClick={() => {
-                              setLinkingPerson(person);
-                              setLinkEmail('');
-                              setLinkError('');
-                              setLinkSuccess('');
-                            }}
-                            className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                            onClick={() => handleOpenEditContact(person)}
+                            className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <Link2 className="w-3 h-3" />
                             <span>Vincular usuário</span>
@@ -756,28 +796,30 @@ export function ProfileContactsView({
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL: Novo Contato */}
+      {/* MODAL: Contato (Criar e Editar) */}
       {/* ========================================================================= */}
-      {isNewContactOpen && (
+      {isContactModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <UserPlus className="w-5 h-5" />
+                  {editingPerson ? <Edit2 className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Adicionar Novo Contato
+                    {editingPerson ? `Editar Contato: ${editingPerson.name}` : 'Adicionar Novo Contato'}
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Cadastre amigos, familiares ou pessoas com quem divide despesas
+                    {editingPerson
+                      ? 'Atualize o nome, observações e a vinculação de conta real'
+                      : 'Cadastre amigos, familiares ou pessoas com quem divide despesas'}
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => setIsNewContactOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                onClick={() => setIsContactModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -790,15 +832,15 @@ export function ProfileContactsView({
               </div>
             )}
 
-            <form onSubmit={handleCreateContact} className="space-y-4">
+            <form onSubmit={handleSubmitContact} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Nome do Contato
                 </label>
                 <input
                   type="text"
-                  value={newContactName}
-                  onChange={(e) => setNewContactName(e.target.value)}
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
                   placeholder="Ex: Lelê, Matheus, Clara..."
                   required
                   autoFocus
@@ -812,40 +854,71 @@ export function ProfileContactsView({
                 </label>
                 <input
                   type="text"
-                  value={newContactNotes}
-                  onChange={(e) => setNewContactNotes(e.target.value)}
+                  value={contactNotes}
+                  onChange={(e) => setContactNotes(e.target.value)}
                   placeholder="Ex: Namorada, colega de apê..."
                   className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  E-mail do Usuário Real (Opcional para vincular imediatamente)
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    E-mail do Usuário Real (Vinculação)
+                  </label>
+                  {editingPerson?.linkedUser && (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                      Atualmente vinculado
+                    </span>
+                  )}
+                </div>
                 <input
                   type="email"
-                  value={newContactEmail}
-                  onChange={(e) => setNewContactEmail(e.target.value)}
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
                   placeholder="ex: lele@homemoney.com"
                   className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {editingPerson?.linkedUser
+                    ? 'Para desvincular este usuário, basta apagar o e-mail acima e salvar.'
+                    : 'Insira o e-mail de um usuário cadastrado para enviar convite e sincronizar acertos de conta.'}
+                </p>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsNewContactOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 text-xs font-bold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-md shadow-emerald-500/20"
-                >
-                  Criar Contato
-                </button>
+              <div className="flex items-center justify-between pt-2">
+                {editingPerson ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsContactModalOpen(false);
+                      handleDeleteContact(editingPerson);
+                    }}
+                    className="text-xs text-rose-500 hover:text-rose-600 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Excluir</span>
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsContactModalOpen(false)}
+                    className="px-4 py-2 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={contactLoading}
+                    className="px-5 py-2 text-xs font-bold rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-md shadow-emerald-500/20 disabled:opacity-60 cursor-pointer"
+                  >
+                    {contactLoading ? 'Salvando...' : editingPerson ? 'Salvar Alterações' : 'Criar Contato'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
