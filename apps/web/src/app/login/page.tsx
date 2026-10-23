@@ -35,8 +35,8 @@ export default function LoginPage() {
 
   // Initialize theme from document or localStorage
   useEffect(() => {
-    const isDark = document.documentElement.classList.contains('dark') ||
-      localStorage.getItem('theme') === 'dark';
+    const savedTheme = localStorage.getItem('homemoney-theme') || localStorage.getItem('theme');
+    const isDark = document.documentElement.classList.contains('dark') || savedTheme === 'dark';
     if (isDark) {
       setTheme('dark');
       document.documentElement.classList.add('dark');
@@ -49,10 +49,12 @@ export default function LoginPage() {
   const toggleTheme = () => {
     if (theme === 'dark') {
       document.documentElement.classList.remove('dark');
+      localStorage.setItem('homemoney-theme', 'light');
       localStorage.setItem('theme', 'light');
       setTheme('light');
     } else {
       document.documentElement.classList.add('dark');
+      localStorage.setItem('homemoney-theme', 'dark');
       localStorage.setItem('theme', 'dark');
       setTheme('dark');
     }
@@ -218,7 +220,7 @@ export default function LoginPage() {
                     onChange={(e) => setIdentifier(e.target.value)}
                     placeholder="lucas@homemoney.com ou Lucas"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
                   />
                 </div>
               </div>
@@ -238,7 +240,7 @@ export default function LoginPage() {
                       onChange={(e) => setSignupName(e.target.value)}
                       placeholder="Ex: Lelê, Matheus..."
                       required
-                      className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                      className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
                     />
                   </div>
                 </div>
@@ -257,7 +259,7 @@ export default function LoginPage() {
                       onChange={(e) => setSignupEmail(e.target.value)}
                       placeholder="seuemail@exemplo.com"
                       required
-                      className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                      className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
                     />
                   </div>
                 </div>
@@ -280,7 +282,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full pl-10 pr-10 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+                  className="w-full pl-10 pr-10 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
                 />
                 <button
                   type="button"

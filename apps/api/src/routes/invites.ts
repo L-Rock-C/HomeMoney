@@ -1,21 +1,13 @@
 import { FastifyPluginAsync } from 'fastify';
 import { prisma } from '../lib/prisma.js';
-import { verifyToken } from '../lib/auth.js';
+import { getRequestUserId } from '../lib/auth.js';
 
 export const invitesRoutes: FastifyPluginAsync = async (app) => {
   // Helper to extract authenticated user
   async function getAuthUser(request: any) {
-    const authHeader = request.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      // Fallback to default Lucas user if running without login
-      return await prisma.user.findFirst();
-    }
-    const token = authHeader.replace('Bearer ', '').trim();
-    const payload = verifyToken(token);
-    if (!payload?.id) {
-      return await prisma.user.findFirst();
-    }
-    return await prisma.user.findUnique({ where: { id: payload.id } });
+    const userId = await getRequestUserId(request);
+    if (!userId) return null;
+    return await prisma.user.findUnique({ where: { id: userId } });
   }
 
   // List invites for current user
@@ -30,7 +22,7 @@ export const invitesRoutes: FastifyPluginAsync = async (app) => {
         where: {
           OR: [
             { receiverId: user.id },
-            { receiverEmail: user.email.toLowerCase() },
+            { receiverEmail: { equals: user.email.toLowerCase().trim(), mode: 'insensitive' } },
           ],
         },
         include: {
@@ -69,9 +61,61 @@ export const invitesRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
+  // Create / Send Invite
+  app.post('/', async (request, reply) => {
+    const user = await getAuthUser(request);
+    if (!user) return reply.status(401).send({ error: 'Usuário não identificado.' });
+
+    const { email, personId } = (request.body as any) || {};
+    if (!email || !email.includes('@')) {
+      return reply.status(400).send({ error: 'Informe um e-mail válido.' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    if (cleanEmail === user.email.toLowerCase().trim()) {
+      return reply.status(400).send({ error: 'Você não pode enviar um convite para si mesmo.' });
+    }
+
+    const targetUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
+
+    // Check if pending invite already exists
+    const existing = await prisma.contactInvite.findFirst({
+      where: {
+        senderId: user.id,
+        receiverEmail: cleanEmail,
+        status: 'PENDING',
+      },
+    });
+
+    if (existing) {
+      return reply.send({
+        message: `Já existe um convite pendente para ${cleanEmail}.`,
+        invite: existing,
+      });
+    }
+
+    const invite = await prisma.contactInvite.create({
+      data: {
+        senderId: user.id,
+        receiverEmail: cleanEmail,
+        receiverId: targetUser?.id || null,
+        personId: personId || null,
+        status: 'PENDING',
+      },
+    });
+
+    return reply.send({
+      message: `Convite de conexão enviado com sucesso para ${cleanEmail}!`,
+      invite,
+    });
+  });
+
   // Accept invite
   app.post('/:id/accept', async (request, reply) => {
     const user = await getAuthUser(request);
+    if (!user) {
+      return reply.status(401).send({ error: 'Usuário não autenticado.' });
+    }
     const { id } = request.params as { id: string };
 
     const invite = await prisma.contactInvite.findUnique({
@@ -87,12 +131,12 @@ export const invitesRoutes: FastifyPluginAsync = async (app) => {
       where: { id },
       data: {
         status: 'ACCEPTED',
-        receiverId: user ? user.id : invite.receiverId,
+        receiverId: user.id,
       },
     });
 
     // If sender had a Person record attached to this invite, link it
-    if (invite.personId && user) {
+    if (invite.personId) {
       await prisma.person.update({
         where: { id: invite.personId },
         data: { linkedUserId: user.id },
@@ -100,11 +144,14 @@ export const invitesRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // Also check if current user has a Person record for sender, link it reciprocally
-    if (user && invite.sender) {
+    if (invite.sender) {
       const myContactForSender = await prisma.person.findFirst({
         where: {
-          name: { contains: invite.sender.name },
-          linkedUserId: null,
+          userId: user.id,
+          OR: [
+            { linkedUserId: invite.sender.id },
+            { name: { contains: invite.sender.name, mode: 'insensitive' } },
+          ],
         },
       });
       if (myContactForSender) {

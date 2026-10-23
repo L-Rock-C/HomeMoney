@@ -768,7 +768,7 @@ export default function HomePage() {
             ) : (
               <div className="flex flex-wrap items-center gap-3 pt-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-500">De:</span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">De:</span>
                   <input
                     type="date"
                     value={startDate}
@@ -778,7 +778,7 @@ export default function HomePage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-500">Até:</span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Até:</span>
                   <input
                     type="date"
                     value={endDate}
@@ -1221,7 +1221,7 @@ export default function HomePage() {
                       ))}
                       {filteredTransactions.length === 0 && (
                         <tr>
-                          <td colSpan={8} className="py-8 text-center text-slate-500">
+                          <td colSpan={8} className="py-8 text-center text-slate-500 dark:text-slate-400">
                             Nenhuma transação encontrada para este filtro.
                           </td>
                         </tr>
@@ -1342,7 +1342,7 @@ export default function HomePage() {
                               <h4 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
                                 {p.name}
                               </h4>
-                              <p className="text-xs text-slate-500">
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
                                 {p.pendingCount || 1} despesa{(p.pendingCount || 1) > 1 ? 's' : ''} a acertar
                               </p>
                             </div>

@@ -19,6 +19,22 @@ const app = fastify({
   logger: true,
 });
 
+// Allow empty body on JSON requests without throwing 400
+app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
+  const text = typeof body === 'string' ? body : (body ? (body as Buffer).toString('utf-8') : '');
+  if (!text || text.trim() === '') {
+    done(null, {});
+    return;
+  }
+  try {
+    const json = JSON.parse(text);
+    done(null, json);
+  } catch (err: any) {
+    err.statusCode = 400;
+    done(err, undefined);
+  }
+});
+
 async function main() {
   // CORS configuration
   await app.register(cors, {

@@ -391,7 +391,7 @@ export function TransactionModal({
                   <button
                     type="button"
                     onClick={() => setShowQuickCategory(false)}
-                    className="p-1 text-slate-400 hover:text-slate-700"
+                    className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -455,7 +455,7 @@ export function TransactionModal({
                   <button
                     type="button"
                     onClick={() => setShowQuickAccount(false)}
-                    className="p-1 text-slate-400 hover:text-slate-700"
+                    className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -513,7 +513,7 @@ export function TransactionModal({
                   <button
                     type="button"
                     onClick={() => setShowQuickPerson(false)}
-                    className="p-1 text-slate-400 hover:text-slate-700"
+                    className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>

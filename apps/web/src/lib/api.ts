@@ -457,6 +457,7 @@ export async function unlinkPerson(personId: string) {
   const res = await fetch(`${API_BASE}/people/${personId}/unlink`, {
     method: 'POST',
     headers: getAuthHeaders(),
+    body: JSON.stringify({}),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -478,6 +479,7 @@ export async function acceptContactInvite(inviteId: string) {
   const res = await fetch(`${API_BASE}/invites/${inviteId}/accept`, {
     method: 'POST',
     headers: getAuthHeaders(),
+    body: JSON.stringify({}),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -490,6 +492,7 @@ export async function rejectContactInvite(inviteId: string) {
   const res = await fetch(`${API_BASE}/invites/${inviteId}/reject`, {
     method: 'POST',
     headers: getAuthHeaders(),
+    body: JSON.stringify({}),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

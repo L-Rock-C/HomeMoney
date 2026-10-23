@@ -417,7 +417,7 @@ export function ManagerModal({
 
                 <div className="flex items-center justify-between pt-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500">Saldo Inicial:</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Saldo Inicial:</span>
                     <input
                       type="text"
                       placeholder="0,00"
@@ -449,7 +449,7 @@ export function ManagerModal({
                         <PiggyBank className="w-4 h-4 text-emerald-500" />
                         <span className="text-sm font-bold text-slate-900 dark:text-white">{a.name}</span>
                       </div>
-                      <div className="text-xs text-slate-500 mt-1">
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                         Tipo: <span className="font-semibold text-slate-700 dark:text-slate-300">
                           {a.type === 'SAVINGS' ? 'Poupança / Caixinha' : a.type === 'CHECKING' ? 'Conta Principal' : 'Carteira'}
                         </span>

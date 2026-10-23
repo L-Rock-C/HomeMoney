@@ -582,7 +582,7 @@ export function ProfileContactsView({
                     value={profileName}
                     onChange={(e) => setProfileName(e.target.value)}
                     required
-                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none transition"
                   />
                 </div>
               </div>
@@ -600,7 +600,7 @@ export function ProfileContactsView({
                     value={profileEmail}
                     onChange={(e) => setProfileEmail(e.target.value)}
                     required
-                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none transition"
                   />
                 </div>
               </div>
@@ -624,7 +624,7 @@ export function ProfileContactsView({
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
 
@@ -637,7 +637,7 @@ export function ProfileContactsView({
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       placeholder="Mín. 4 caracteres"
-                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                 </div>
@@ -652,7 +652,7 @@ export function ProfileContactsView({
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Repita a nova senha"
-                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                 )}
@@ -687,7 +687,7 @@ export function ProfileContactsView({
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white">
                     Vincular a Usuário Real
                   </h4>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
                     Contato: <strong className="text-emerald-600 dark:text-emerald-400">{linkingPerson.name}</strong>
                   </p>
                 </div>
@@ -730,7 +730,7 @@ export function ProfileContactsView({
                   placeholder="ex: lele@homemoney.com"
                   required
                   autoFocus
-                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
 
@@ -770,7 +770,7 @@ export function ProfileContactsView({
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white">
                     Adicionar Novo Contato
                   </h4>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
                     Cadastre amigos, familiares ou pessoas com quem divide despesas
                   </p>
                 </div>
@@ -802,7 +802,7 @@ export function ProfileContactsView({
                   placeholder="Ex: Lelê, Matheus, Clara..."
                   required
                   autoFocus
-                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
 
@@ -815,7 +815,7 @@ export function ProfileContactsView({
                   value={newContactNotes}
                   onChange={(e) => setNewContactNotes(e.target.value)}
                   placeholder="Ex: Namorada, colega de apê..."
-                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
 
@@ -828,7 +828,7 @@ export function ProfileContactsView({
                   value={newContactEmail}
                   onChange={(e) => setNewContactEmail(e.target.value)}
                   placeholder="ex: lele@homemoney.com"
-                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
                 />
               </div>
 

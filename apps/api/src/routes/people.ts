@@ -300,13 +300,7 @@ export const peopleRoutes: FastifyPluginAsync = async (app) => {
       where: { email: cleanEmail },
     });
 
-    if (!targetUser) {
-      return reply.status(404).send({
-        error: `Nenhum usuário cadastrado encontrado com o e-mail "${cleanEmail}". Peça para a pessoa se cadastrar no HomeMoney primeiro.`,
-      });
-    }
-
-    if (targetUser.id === userId) {
+    if (targetUser && targetUser.id === userId) {
       return reply.status(400).send({ error: 'Você não pode vincular seu próprio usuário como contato.' });
     }
 
@@ -315,34 +309,29 @@ export const peopleRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(404).send({ error: 'Contato não encontrado.' });
     }
 
-    const updated = await prisma.person.update({
-      where: { id },
-      data: { linkedUserId: targetUser.id },
-      include: {
-        linkedUser: {
-          select: { id: true, name: true, email: true },
-        },
+    // Remove any previous rejected/pending invites for this person
+    await prisma.contactInvite.deleteMany({
+      where: {
+        senderId: userId,
+        personId: id,
+      },
+    }).catch(() => {});
+
+    // Create a PENDING contact invite so the other user receives it in their dashboard
+    const invite = await prisma.contactInvite.create({
+      data: {
+        senderId: userId,
+        receiverEmail: cleanEmail,
+        receiverId: targetUser?.id || null,
+        personId: id,
+        status: 'PENDING',
       },
     });
 
-    // Create or update accepted ContactInvite record
-    try {
-      await prisma.contactInvite.create({
-        data: {
-          senderId: userId,
-          receiverEmail: cleanEmail,
-          receiverId: targetUser.id,
-          personId: id,
-          status: 'ACCEPTED',
-        },
-      });
-    } catch (e) {
-      // non-fatal
-    }
-
     return reply.send({
-      message: `Contato "${person.name}" vinculado com sucesso ao usuário "${targetUser.name}" (${targetUser.email})!`,
-      person: updated,
+      message: `Convite de conexão enviado para "${cleanEmail}"! O outro usuário receberá o convite para aceitar no painel dele.`,
+      person,
+      invite,
     });
   });
 
@@ -359,6 +348,13 @@ export const peopleRoutes: FastifyPluginAsync = async (app) => {
       where: { id },
       data: { linkedUserId: null },
     });
+
+    // Remove any invites associated with this contact so it can be invited again
+    await prisma.contactInvite.deleteMany({
+      where: {
+        personId: id,
+      },
+    }).catch(() => {});
 
     return reply.send({
       message: `Vínculo com usuário removido com sucesso.`,
