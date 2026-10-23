@@ -125,16 +125,8 @@ export default function LoginPage() {
       <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />
 
-      {/* Top Bar with Home Link & Theme Switcher */}
-      <div className="w-full max-w-4xl flex items-center justify-between mb-8 z-10 px-2">
-        <button
-          onClick={() => router.push('/')}
-          className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition group py-1.5 px-3 rounded-lg hover:bg-white dark:hover:bg-slate-900 border border-transparent hover:border-slate-200 dark:hover:border-slate-800"
-        >
-          <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-          Voltar ao Painel
-        </button>
-
+      {/* Top Bar with Theme Switcher */}
+      <div className="w-full max-w-md flex items-center justify-end mb-6 z-10 px-2">
         <button
           onClick={toggleTheme}
           className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-emerald-500 transition shadow-sm"
