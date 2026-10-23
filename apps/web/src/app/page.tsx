@@ -334,7 +334,7 @@ export default function HomePage() {
     val?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00';
 
   return (
-    <div className="min-h-screen flex bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200">
+    <div className="min-h-screen flex w-full max-w-full overflow-x-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200">
       {/* Mobile Backdrop */}
       {mobileMenuOpen && (
         <div
@@ -659,22 +659,22 @@ export default function HomePage() {
       {/* Main Content Area */}
       {/* ========================================================================= */}
       <div
-        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
+        className={`flex-1 min-w-0 flex flex-col min-h-screen w-full max-w-full overflow-x-hidden transition-all duration-300 ${
           sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
         }`}
       >
         {/* Top Header */}
-        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/60 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
+        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/60 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"
             >
               <Menu className="w-5 h-5" />
             </button>
 
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <div className="truncate">
+              <h2 className="text-sm sm:text-lg font-bold text-slate-900 dark:text-white truncate">
                 {activeTab === 'DASHBOARD' && 'Visão Geral'}
                 {activeTab === 'TRANSACTIONS' && 'Extrato de Transações'}
                 {activeTab === 'BALANCE' && 'Balanço Consolidado'}
@@ -685,21 +685,23 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
             {activeTab !== 'PROFILE' && (
               <button
                 onClick={handleOpenCreate}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/20 transition hover:scale-[1.02] active:scale-[0.98]"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/20 transition hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap cursor-pointer"
               >
                 <Plus className="w-4 h-4 stroke-[3]" />
-                <span>Nova Transação</span>
+                <span>
+                  <span className="hidden sm:inline">Nova </span>Transação
+                </span>
               </button>
             )}
           </div>
         </header>
 
         {/* Content Body */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full mx-auto">
+        <main className="flex-1 min-w-0 p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-7xl w-full mx-auto overflow-x-hidden">
           {/* ========================================================================= */}
           {/* Dashboard Geral (Filtros & Indicadores KPI) - Apenas em Telas Financeiras */}
           {/* ========================================================================= */}
@@ -747,7 +749,7 @@ export default function HomePage() {
 
             {/* Filter Content */}
             {filterMode === 'MONTH' ? (
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 max-w-full scrollbar-none">
                 {availableMonths.map((m) => {
                   const isSelected = selectedMonth === m;
                   return (
@@ -1075,7 +1077,7 @@ export default function HomePage() {
                   </select>
 
                   {/* Filter by Type */}
-                  <div className="flex items-center gap-1 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                  <div className="flex items-center gap-1 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto max-w-full scrollbar-none">
                     <button
                       onClick={() => setTypeFilter('ALL')}
                       className={`px-3 py-1 rounded-lg text-xs font-medium transition ${
@@ -1121,9 +1123,9 @@ export default function HomePage() {
               </div>
 
               {/* Transactions Table */}
-              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 overflow-hidden shadow-sm w-full max-w-full">
+                <div className="overflow-x-auto w-full max-w-full">
+                  <table className="w-full text-left text-sm min-w-[700px]">
                     <thead className="bg-slate-50 dark:bg-slate-900/80 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                       <tr>
                         <th className="py-3 px-4">Status</th>
@@ -1244,8 +1246,8 @@ export default function HomePage() {
                   Histórico oficial por mês (equivalente à aba Balanço da sua planilha)
                 </p>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+              <div className="overflow-x-auto w-full max-w-full">
+                <table className="w-full text-left text-sm min-w-[550px]">
                   <thead className="bg-slate-50 dark:bg-slate-900/80 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                     <tr>
                       <th className="py-3.5 px-4">Mês/Ano</th>

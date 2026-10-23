@@ -274,8 +274,8 @@ export function MonthlyBarChart({
       </div>
 
       {/* Main Chart Graphic */}
-      <div className="relative pt-6 pb-2 border-b border-slate-200 dark:border-slate-800">
-        <div className="grid grid-flow-col auto-cols-fr gap-2 sm:gap-4 items-end h-48 sm:h-56 px-2">
+      <div className="relative pt-6 pb-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto max-w-full scrollbar-none">
+        <div className="grid grid-flow-col auto-cols-fr gap-2 sm:gap-4 items-end h-48 sm:h-56 px-2 min-w-[420px] sm:min-w-0">
           {recentReports.map((report) => {
             const isSelected = report.month === selectedMonth;
             const incomeHeight = Math.max((report.totalIncome / maxVal) * 100, 3);
@@ -340,7 +340,7 @@ export function MonthlyBarChart({
       </div>
 
       {/* Dynamic Hover Details Bar */}
-      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200/70 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200/70 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 text-xs">
         {hoveredMonth ? (
           <>
             <span className="font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
@@ -351,7 +351,7 @@ export function MonthlyBarChart({
                 </span>
               )}
             </span>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
                 + {formatBRL(hoveredMonth.totalIncome)}
               </span>
