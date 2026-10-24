@@ -40,6 +40,7 @@ import {
   History,
   Eye,
   EyeOff,
+  ArrowRight,
 } from 'lucide-react';
 import {
   fetchMonthlyReports,
@@ -55,6 +56,8 @@ import {
   fetchCurrentUser,
   getAuthToken,
   clearAuthToken,
+  fetchPendingTransfers,
+  TransferNotificationItem,
 } from '../lib/api';
 import { TransactionModal } from '../components/TransactionModal';
 import { SettleModal } from '../components/SettleModal';
@@ -65,6 +68,7 @@ import { ReconciliationQueueModal } from '../components/ReconciliationQueueModal
 import { NotificationHistoryModal } from '../components/NotificationHistoryModal';
 import { NotificationHistoryView } from '../components/NotificationHistoryView';
 import { ProfileContactsView } from '../components/ProfileContactsView';
+import { TransferRecognitionModal } from '../components/TransferRecognitionModal';
 import { CategoryDonutChart, MonthlyBarChart } from '../components/FinanceCharts';
 import { SelectDropdown } from '../components/ui/FormControls';
 import {
@@ -186,6 +190,45 @@ export default function HomePage() {
   const [isCheckingNotifications, setIsCheckingNotifications] = useState(false);
   const [checkFeedback, setCheckFeedback] = useState<string | null>(null);
 
+  // Fila de Transferências e Reembolsos de Contatos Vinculados
+  const [pendingTransfers, setPendingTransfers] = useState<TransferNotificationItem[]>([]);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+
+  const loadPendingTransfersData = async () => {
+    try {
+      const data = await fetchPendingTransfers();
+      setPendingTransfers(data);
+
+      // Dispara notificação nativa no Android para novas transferências
+      if (typeof window !== 'undefined' && (window as any).AndroidNotificationBridge && Array.isArray(data) && data.length > 0) {
+        try {
+          const notifiedKey = 'homemoney_notified_transfers_v1';
+          const notifiedList: string[] = JSON.parse(localStorage.getItem(notifiedKey) || '[]');
+          let updatedList = [...notifiedList];
+
+          for (const item of data) {
+            if (!notifiedList.includes(item.id)) {
+              if (typeof (window as any).AndroidNotificationBridge.postTransferNotification === 'function') {
+                (window as any).AndroidNotificationBridge.postTransferNotification(
+                  item.sender?.name || 'Contato',
+                  item.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                  item.description,
+                  item.id
+                );
+              }
+              updatedList.push(item.id);
+            }
+          }
+          localStorage.setItem(notifiedKey, JSON.stringify(updatedList));
+        } catch (e) {
+          console.warn('Erro ao disparar notificação nativa de transferência:', e);
+        }
+      }
+    } catch {
+      // non-fatal
+    }
+  };
+
   const refreshQueueData = () => {
     const queue = getPendingQueue();
     setPendingQueue(queue);
@@ -203,15 +246,18 @@ export default function HomePage() {
 
     setIsCheckingNotifications(true);
     triggerAndroidNotificationCheck();
+    loadPendingTransfersData();
 
     // Primeiro refresh rápido
     setTimeout(() => {
       refreshQueueData();
+      loadPendingTransfersData();
     }, 350);
 
     // Segundo refresh completo com feedback
     setTimeout(() => {
       refreshQueueData();
+      loadPendingTransfersData();
       setIsCheckingNotifications(false);
 
       const queue = getPendingQueue();
@@ -230,10 +276,22 @@ export default function HomePage() {
   useEffect(() => {
     refreshQueueData();
     triggerAndroidNotificationCheck();
+    loadPendingTransfersData();
 
-    // Se o aplicativo foi aberto a partir de um clique em "Registrar Agora" na notificação nativa
+    // Se o aplicativo foi aberto a partir de um clique em "Registrar Agora" na notificação nativa bancária
     if (checkAndroidPendingReconciliation()) {
       setIsQueueModalOpen(true);
+    }
+
+    // Se o aplicativo foi aberto a partir de uma notificação nativa de transferência entre contatos
+    if (typeof window !== 'undefined' && (window as any).AndroidNotificationBridge) {
+      try {
+        if (typeof (window as any).AndroidNotificationBridge.consumePendingOpenTransfer === 'function') {
+          if ((window as any).AndroidNotificationBridge.consumePendingOpenTransfer()) {
+            setIsTransferModalOpen(true);
+          }
+        }
+      } catch {}
     }
 
     const handleOpenReconcile = () => {
@@ -245,12 +303,19 @@ export default function HomePage() {
       refreshQueueData();
     };
 
+    const handleOpenTransfer = () => {
+      loadPendingTransfersData();
+      setIsTransferModalOpen(true);
+    };
+
     window.addEventListener('homemoney_open_reconciliation', handleOpenReconcile);
     window.addEventListener('homemoney_queue_updated', handleQueueUpdated);
+    window.addEventListener('homemoney_open_transfer', handleOpenTransfer);
 
     return () => {
       window.removeEventListener('homemoney_open_reconciliation', handleOpenReconcile);
       window.removeEventListener('homemoney_queue_updated', handleQueueUpdated);
+      window.removeEventListener('homemoney_open_transfer', handleOpenTransfer);
     };
   }, []);
 
@@ -373,6 +438,9 @@ export default function HomePage() {
         availableMonths: allMonths,
         selectedMonth: initialMonth,
       });
+
+      // Carrega transferências pendentes de contatos vinculados
+      loadPendingTransfersData();
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
     } finally {
@@ -937,6 +1005,21 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0 relative">
+            {/* Botão de Transferências e Reembolsos de Contatos Vinculados */}
+            {pendingTransfers.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsTransferModalOpen(true)}
+                className="p-2 sm:p-2.5 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition hover:scale-[1.05] active:scale-[0.95] cursor-pointer shadow-xs relative flex items-center justify-center shrink-0 animate-pulse"
+                title={`${pendingTransfers.length} transferências/reembolsos recebidos aguardando reconhecimento`}
+              >
+                <HandCoins className="w-4 h-4 text-amber-500" />
+                <span className="absolute -top-1 -right-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500 text-white dark:text-slate-950 shadow-xs leading-none">
+                  {pendingTransfers.length}
+                </span>
+              </button>
+            )}
+
             {activeTab !== 'PROFILE' && activeTab !== 'SUGGESTIONS' && activeTab !== 'MANAGER' && (
               <>
                 {/* Botão de Checagem e Atualização de Notificações */}
@@ -984,6 +1067,43 @@ export default function HomePage() {
           {/* ========================================================================= */}
           {/* Dashboard Geral (Filtros & Indicadores KPI) - Apenas em Telas Financeiras */}
           {/* ========================================================================= */}
+          {/* Banner de Reconhecimento de Transferências / Reembolsos entre Contatos Vinculados */}
+          {activeTab === 'DASHBOARD' && pendingTransfers.length > 0 && (
+            <div
+              onClick={() => setIsTransferModalOpen(true)}
+              className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-teal-500/10 border border-amber-500/40 shadow-lg shadow-amber-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300 cursor-pointer hover:border-amber-500/60 hover:scale-[1.005] transition"
+            >
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                  <HandCoins className="w-5 h-5 text-amber-500 animate-bounce" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30">
+                      {pendingTransfers.length} {pendingTransfers.length === 1 ? 'Transferência Pendente' : 'Transferências Pendentes'}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                      Reconhecimento Necessário
+                    </span>
+                  </div>
+
+                  <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
+                    {pendingTransfers[0].sender?.name} registrou {formatBRL(pendingTransfers[0].amount)} (&ldquo;{pendingTransfers[0].description}&rdquo;)
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Clique para reconhecer esta movimentação e aceitar o lançamento no seu extrato ou recusar.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-center">
+                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-xs whitespace-nowrap">
+                  Reconhecer Agora <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Smart Multi-Bank Notification Queue Banner - Apenas no Dashboard quando houver sugestões pendentes */}
           {activeTab === 'DASHBOARD' && pendingQueue.length > 0 && (
             <div
@@ -1951,6 +2071,8 @@ export default function HomePage() {
               people={people}
               onRefreshData={loadInitialData}
               formatBRL={formatBRL}
+              pendingTransfers={pendingTransfers}
+              onOpenTransferModal={() => setIsTransferModalOpen(true)}
             />
           )}
 
@@ -2044,6 +2166,18 @@ export default function HomePage() {
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
         onQueueUpdated={refreshQueueData}
+      />
+
+      <TransferRecognitionModal
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+        onSuccess={() => {
+          loadPendingTransfersData();
+          loadInitialData();
+        }}
+        pendingTransfers={pendingTransfers}
+        accounts={accounts}
+        formatBRL={formatBRL}
       />
     </div>
   );

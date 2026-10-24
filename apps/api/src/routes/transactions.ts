@@ -90,6 +90,35 @@ export const transactionsRoutes: FastifyPluginAsync = async (app) => {
         include: { account: true, category: true, person: true },
       });
 
+      // Se o lançamento envolver um contato vinculado a outro usuário real, gera notificação para reconhecimento
+      if (data.personId) {
+        try {
+          const person = await prisma.person.findUnique({
+            where: { id: data.personId },
+            select: { id: true, name: true, linkedUserId: true },
+          });
+
+          if (person && person.linkedUserId && person.linkedUserId !== userId) {
+            await prisma.transferNotification.create({
+              data: {
+                senderId: userId,
+                receiverId: person.linkedUserId,
+                transactionId: transaction.id,
+                description: data.description,
+                amount: data.amount,
+                type: data.type,
+                date: pDate,
+                paymentMethod: data.paymentMethod,
+                notes: data.notes,
+                status: 'PENDING',
+              },
+            });
+          }
+        } catch (err) {
+          console.error('Erro ao criar notificação de transferência vinculada:', err);
+        }
+      }
+
       return reply.status(201).send(transaction);
     }
 

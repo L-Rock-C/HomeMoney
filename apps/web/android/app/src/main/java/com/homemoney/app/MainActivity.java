@@ -22,6 +22,8 @@ public class MainActivity extends BridgeActivity {
 
     private boolean pendingOpenReconciliation = false;
     private String pendingReconciliationId = null;
+    private boolean pendingOpenTransferRecognition = false;
+    private String pendingTransferRecognitionId = null;
 
     private final BroadcastReceiver notificationReceiver = new BroadcastReceiver() {
         @Override
@@ -59,6 +61,18 @@ public class MainActivity extends BridgeActivity {
 
             syncPendingBankNotifications();
             triggerOpenReconciliationEvent();
+        } else if (intent != null && "OPEN_TRANSFER_RECOGNITION".equals(intent.getAction())) {
+            pendingOpenTransferRecognition = true;
+            pendingTransferRecognitionId = intent.getStringExtra("transfer_id");
+
+            if (pendingTransferRecognitionId != null) {
+                try {
+                    int notifIntId = Math.abs(pendingTransferRecognitionId.hashCode());
+                    NotificationManagerCompat.from(this).cancel(notifIntId);
+                } catch (Exception ignored) {}
+            }
+
+            triggerOpenTransferEvent();
         }
     }
 
@@ -180,11 +194,26 @@ public class MainActivity extends BridgeActivity {
                 }
             }
 
-            // 3. Se houver intent para abrir o modal de conciliação
+            // 3. Se houver intent para abrir o modal de conciliação ou reconhecimento
             if (pendingOpenReconciliation) {
                 triggerOpenReconciliationEvent();
             }
+            if (pendingOpenTransferRecognition) {
+                triggerOpenTransferEvent();
+            }
 
+        } catch (Exception ignored) {}
+    }
+
+    private void triggerOpenTransferEvent() {
+        try {
+            if (getBridge() != null && getBridge().getWebView() != null) {
+                WebView webView = getBridge().getWebView();
+                String idArg = pendingTransferRecognitionId != null ? pendingTransferRecognitionId : "";
+                String js = "window.dispatchEvent(new CustomEvent('homemoney_open_transfer', { detail: { id: '" + idArg + "' } }));";
+                webView.post(() -> webView.evaluateJavascript(js, null));
+                webView.postDelayed(() -> webView.evaluateJavascript(js, null), 400);
+            }
         } catch (Exception ignored) {}
     }
 
@@ -312,6 +341,89 @@ public class MainActivity extends BridgeActivity {
                     }
                 }
             } catch (Exception ignored) {}
+        }
+
+        @JavascriptInterface
+        public boolean consumePendingOpenTransfer() {
+            if (context instanceof MainActivity) {
+                MainActivity activity = (MainActivity) context;
+                boolean shouldOpen = activity.pendingOpenTransferRecognition;
+                activity.pendingOpenTransferRecognition = false;
+                return shouldOpen;
+            }
+            return false;
+        }
+
+        @JavascriptInterface
+        public String getPendingTransferId() {
+            if (context instanceof MainActivity) {
+                MainActivity activity = (MainActivity) context;
+                String id = activity.pendingTransferRecognitionId;
+                activity.pendingTransferRecognitionId = null;
+                return id;
+            }
+            return null;
+        }
+
+        @JavascriptInterface
+        public void postTransferNotification(String senderName, String amountStr, String description, String notifId) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    if (context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        return;
+                    }
+                }
+
+                String channelId = "homemoney_transfers_channel";
+                android.app.NotificationManager manager = (android.app.NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager != null) {
+                    android.app.NotificationChannel channel = manager.getNotificationChannel(channelId);
+                    if (channel == null) {
+                        channel = new android.app.NotificationChannel(
+                            channelId,
+                            "Transferências de Contatos",
+                            android.app.NotificationManager.IMPORTANCE_HIGH
+                        );
+                        channel.setDescription("Notificações de transferências e reembolsos gerados por contatos");
+                        channel.enableLights(true);
+                        channel.enableVibration(true);
+                        channel.setShowBadge(true);
+                        manager.createNotificationChannel(channel);
+                    }
+                }
+
+                Intent openIntent = new Intent(context, MainActivity.class);
+                openIntent.setAction("OPEN_TRANSFER_RECOGNITION");
+                openIntent.putExtra("transfer_id", notifId);
+                openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+                int flags = android.app.PendingIntent.FLAG_UPDATE_CURRENT;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    flags |= android.app.PendingIntent.FLAG_IMMUTABLE;
+                }
+                android.app.PendingIntent openPendingIntent = android.app.PendingIntent.getActivity(
+                    context,
+                    Math.abs(notifId.hashCode()),
+                    openIntent,
+                    flags
+                );
+
+                androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(context, channelId)
+                    .setSmallIcon(android.R.drawable.stat_notify_more)
+                    .setContentTitle("Transferência de " + senderName + " (" + amountStr + ")")
+                    .setContentText(description != null && !description.isEmpty() ? description : "Toque para reconhecer e aceitar ou negar.")
+                    .setStyle(new androidx.core.app.NotificationCompat.BigTextStyle()
+                        .bigText(senderName + " registrou uma transferência / reembolso de " + amountStr + " em seu nome (" + description + "). Abra para reconhecer e aceitar na sua conta ou recusar."))
+                    .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                    .setAutoCancel(true)
+                    .setContentIntent(openPendingIntent);
+
+                if (manager != null) {
+                    manager.notify(Math.abs(notifId.hashCode()), builder.build());
+                }
+            } catch (Exception e) {
+                android.util.Log.e("MainActivity", "Erro ao postar notificação de transferência", e);
+            }
         }
 
         @JavascriptInterface

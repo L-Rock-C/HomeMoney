@@ -23,6 +23,7 @@ import {
   X,
   Clock,
   ArrowRight,
+  HandCoins,
 } from 'lucide-react';
 import {
   updateUserProfile,
@@ -42,6 +43,8 @@ interface ProfileContactsViewProps {
   people: any[];
   onRefreshData: () => void;
   formatBRL: (val: number) => string;
+  pendingTransfers?: any[];
+  onOpenTransferModal?: () => void;
 }
 
 export function ProfileContactsView({
@@ -49,6 +52,8 @@ export function ProfileContactsView({
   people,
   onRefreshData,
   formatBRL,
+  pendingTransfers = [],
+  onOpenTransferModal,
 }: ProfileContactsViewProps) {
   const router = useRouter();
 
@@ -405,6 +410,58 @@ export function ProfileContactsView({
               <span>Novo Contato</span>
             </button>
           </div>
+
+          {/* Pending Transfer Notifications Banner */}
+          {pendingTransfers.length > 0 && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-teal-500/10 border border-amber-500/40 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400">
+                  <HandCoins className="w-4 h-4" />
+                  <span>Transferências & Reembolsos Recebidos ({pendingTransfers.length})</span>
+                </div>
+                {onOpenTransferModal && (
+                  <button
+                    onClick={onOpenTransferModal}
+                    className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    Reconhecer tudo <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {pendingTransfers.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-500/20 shadow-xs flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white truncate block">
+                          {item.sender?.name || 'Contato'}
+                        </span>
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          {formatBRL(item.amount)}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate block mt-0.5">
+                        &ldquo;{item.description}&rdquo;
+                      </span>
+                    </div>
+
+                    {onOpenTransferModal && (
+                      <button
+                        onClick={onOpenTransferModal}
+                        className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 font-bold text-xs whitespace-nowrap shadow-xs transition cursor-pointer shrink-0"
+                      >
+                        Reconhecer
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Pending Incoming Invites Banner */}
           {invites.received.filter((i) => i.status === 'PENDING').length > 0 && (

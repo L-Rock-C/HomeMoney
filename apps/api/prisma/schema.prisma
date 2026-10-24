@@ -25,6 +25,9 @@ model User {
   linkedPeople    Person[]         @relation("LinkedUser")
   sentInvites     ContactInvite[]  @relation("SentInvites")
   receivedInvites ContactInvite[]  @relation("ReceivedInvites")
+
+  sentTransferNotifications     TransferNotification[] @relation("SentTransferNotifications")
+  receivedTransferNotifications TransferNotification[] @relation("ReceivedTransferNotifications")
 }
 
 model Account {
@@ -135,4 +138,25 @@ model Transaction {
 
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+}
+
+model TransferNotification {
+  id            String   @id @default(uuid())
+  senderId      String
+  sender        User     @relation("SentTransferNotifications", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId    String
+  receiver      User     @relation("ReceivedTransferNotifications", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  transactionId String?
+  description   String
+  amount        Float
+  type          String   @default("REIMBURSEMENT") // REIMBURSEMENT, EXPENSE, SETTLEMENT, TRANSFER
+  date          DateTime @default(now())
+  paymentMethod String?  @default("Pix")
+  notes         String?
+
+  status        String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

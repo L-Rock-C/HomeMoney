@@ -11,6 +11,7 @@ import { transactionsRoutes } from './routes/transactions.js';
 import { reportsRoutes } from './routes/reports.js';
 import { paymentMethodsRoutes } from './routes/payment-methods.js';
 import { invitesRoutes } from './routes/invites.js';
+import { transfersRoutes } from './routes/transfers.js';
 import { ensureUserData } from './lib/backfill.js';
 
 dotenv.config();
@@ -80,6 +81,7 @@ async function main() {
   await app.register(reportsRoutes, { prefix: '/reports' });
   await app.register(paymentMethodsRoutes, { prefix: '/payment-methods' });
   await app.register(invitesRoutes, { prefix: '/invites' });
+  await app.register(transfersRoutes, { prefix: '/transfers' });
 
   const port = Number(process.env.PORT) || 3333;
   const host = '0.0.0.0';

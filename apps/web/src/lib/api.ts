@@ -500,3 +500,61 @@ export async function rejectContactInvite(inviteId: string) {
   }
   return res.json();
 }
+
+// ==========================================
+// Transfer & Reimbursement Notifications
+// ==========================================
+
+export interface TransferNotificationItem {
+  id: string;
+  transactionId?: string | null;
+  description: string;
+  amount: number;
+  type: string;
+  date: string;
+  paymentMethod: string;
+  notes?: string | null;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  createdAt: string;
+  sender: {
+    id: string;
+    name: string;
+    email: string;
+    avatar?: string | null;
+  };
+}
+
+export async function fetchPendingTransfers(): Promise<TransferNotificationItem[]> {
+  const res = await fetch(`${API_BASE}/transfers/pending`, {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Falha ao buscar transferências pendentes');
+  return res.json();
+}
+
+export async function respondToTransfer(
+  id: string,
+  data: { action: 'ACCEPT' | 'REJECT'; accountId?: string; targetType?: 'INCOME' | 'EXPENSE' }
+) {
+  const res = await fetch(`${API_BASE}/transfers/${id}/respond`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Falha ao responder à transferência');
+  }
+  return res.json();
+}
+
+export async function fetchTransferHistory() {
+  const res = await fetch(`${API_BASE}/transfers/history`, {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Falha ao buscar histórico de transferências');
+  return res.json();
+}
+

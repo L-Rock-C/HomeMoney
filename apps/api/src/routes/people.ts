@@ -280,6 +280,28 @@ export const peopleRoutes: FastifyPluginAsync = async (app) => {
       },
     });
 
+    // Se o contato for vinculado a outro usuário, cria notificação de acerto/reembolso para reconhecimento
+    if (currentPerson.linkedUserId && currentPerson.linkedUserId !== userId) {
+      try {
+        await prisma.transferNotification.create({
+          data: {
+            senderId: userId,
+            receiverId: currentPerson.linkedUserId,
+            transactionId: transaction.id,
+            description: `Acerto / Reembolso: ${description}`,
+            amount,
+            type: 'SETTLEMENT',
+            date: dateObj,
+            paymentMethod: 'Pix',
+            notes: `Acerto de contas no valor de ${amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
+            status: 'PENDING',
+          },
+        });
+      } catch (err) {
+        console.error('Erro ao criar notificação de acerto para usuário vinculado:', err);
+      }
+    }
+
     return reply.status(201).send({ message: 'Acerto registrado e itens quitados com sucesso!', transaction });
   });
 
