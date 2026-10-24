@@ -24,6 +24,7 @@ import {
   createPerson,
   createAccount,
 } from '../lib/api';
+import { TextInput, CurrencyInput, Checkbox, SelectDropdown } from './ui/FormControls';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -294,62 +295,46 @@ export function TransactionModal({
           {/* Description & Amount */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                Descrição
-              </label>
-              <input
-                type="text"
+              <TextInput
+                label="Descrição"
                 required
                 placeholder="Ex: Almoço de Domingo, Revisão Moto..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 text-sm focus:outline-none focus:border-emerald-500 transition"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                Valor Total (R$)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">R$</span>
-                <input
-                  type="text"
-                  required
-                  placeholder="0,00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-bold text-sm focus:outline-none focus:border-emerald-500 transition"
-                />
-              </div>
+              <CurrencyInput
+                label="Valor Total (R$)"
+                required
+                currencyPrefix="R$"
+                placeholder="0,00"
+                value={amount}
+                onChange={(val) => setAmount(val)}
+              />
             </div>
           </div>
 
           {/* Dates */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                Data da Compra
-              </label>
-              <input
+              <TextInput
+                label="Data da Compra"
                 type="date"
                 required
                 value={purchaseDate}
                 onChange={(e) => setPurchaseDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500 transition"
+                leftIcon={<Calendar className="w-4 h-4 text-slate-500" />}
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-amber-500" />
-                Data de Vencimento
-              </label>
-              <input
+              <TextInput
+                label="Data de Vencimento"
                 type="date"
                 required
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500 transition"
+                leftIcon={<Calendar className="w-4 h-4 text-amber-500" />}
               />
             </div>
           </div>
@@ -358,120 +343,130 @@ export function TransactionModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* Category with Quick Add */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                  <Tag className="w-3.5 h-3.5 text-slate-500" />
-                  Categoria
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowQuickCategory(!showQuickCategory)}
-                  className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
-                >
-                  <Plus className="w-3 h-3" /> Nova
-                </button>
-              </div>
-
               {showQuickCategory ? (
-                <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <input
-                    type="text"
-                    placeholder="Nome da categoria..."
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleQuickAddCategory}
-                    className="px-2.5 py-1 text-xs font-semibold bg-emerald-500 text-white dark:text-slate-950 rounded-lg"
-                  >
-                    Salvar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowQuickCategory(false)}
-                    className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <span>Nova Categoria</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickCategory(false)}
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <input
+                      type="text"
+                      placeholder="Nome da categoria..."
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleQuickAddCategory}
+                      className="px-2.5 py-1 text-xs font-semibold bg-emerald-500 text-white dark:text-slate-950 rounded-lg cursor-pointer"
+                    >
+                      Salvar
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500 transition cursor-pointer"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                      <Tag className="w-3.5 h-3.5 text-slate-500" />
+                      Categoria
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickCategory(true)}
+                      className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" /> Nova
+                    </button>
+                  </div>
+                  <SelectDropdown
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </SelectDropdown>
+                </div>
               )}
             </div>
 
             {/* Carteira / Poupança with Quick Add */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                  <Wallet className="w-3.5 h-3.5 text-slate-500" />
-                  Carteira / Poupança
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowQuickAccount(!showQuickAccount)}
-                  className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
-                >
-                  <Plus className="w-3 h-3" /> Nova
-                </button>
-              </div>
-
               {showQuickAccount ? (
-                <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <input
-                    type="text"
-                    placeholder="Nome da carteira..."
-                    value={newAccountName}
-                    onChange={(e) => setNewAccountName(e.target.value)}
-                    className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none"
-                  />
-                  <select
-                    value={newAccountType}
-                    onChange={(e) => setNewAccountType(e.target.value)}
-                    className="px-1.5 py-1 text-[11px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-700 dark:text-slate-300"
-                  >
-                    <option value="CHECKING">Principal</option>
-                    <option value="SAVINGS">Poupança</option>
-                    <option value="WALLET">Carteira</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={handleQuickAddAccount}
-                    className="px-2.5 py-1 text-xs font-semibold bg-emerald-500 text-white dark:text-slate-950 rounded-lg"
-                  >
-                    Salvar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowQuickAccount(false)}
-                    className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <span>Nova Carteira</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickAccount(false)}
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <input
+                      type="text"
+                      placeholder="Nome da carteira..."
+                      value={newAccountName}
+                      onChange={(e) => setNewAccountName(e.target.value)}
+                      className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none"
+                    />
+                    <select
+                      value={newAccountType}
+                      onChange={(e) => setNewAccountType(e.target.value)}
+                      className="px-1.5 py-1 text-[11px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-700 dark:text-slate-300"
+                    >
+                      <option value="CHECKING">Principal</option>
+                      <option value="SAVINGS">Poupança</option>
+                      <option value="WALLET">Carteira</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleQuickAddAccount}
+                      className="px-2.5 py-1 text-xs font-semibold bg-emerald-500 text-white dark:text-slate-950 rounded-lg cursor-pointer"
+                    >
+                      Salvar
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <select
-                  value={accountId}
-                  onChange={(e) => setAccountId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500 transition cursor-pointer"
-                >
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} ({a.type === 'SAVINGS' ? 'Poupança/Caixinha' : a.type === 'CHECKING' ? 'Principal' : 'Carteira'})
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                      <Wallet className="w-3.5 h-3.5 text-slate-500" />
+                      Carteira / Poupança
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickAccount(true)}
+                      className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" /> Nova
+                    </button>
+                  </div>
+                  <SelectDropdown
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
+                  >
+                    {accounts.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name} ({a.type === 'SAVINGS' ? 'Poupança/Caixinha' : a.type === 'CHECKING' ? 'Principal' : 'Carteira'})
+                      </option>
+                    ))}
+                  </SelectDropdown>
+                </div>
               )}
             </div>
           </div>
@@ -480,70 +475,74 @@ export function TransactionModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* Person with Quick Add */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1">
-                  <User className="w-3.5 h-3.5 text-slate-500" />
-                  Terceiro / Contato
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowQuickPerson(!showQuickPerson)}
-                  className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
-                >
-                  <Plus className="w-3 h-3" /> Novo
-                </button>
-              </div>
-
               {showQuickPerson ? (
-                <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <input
-                    type="text"
-                    placeholder="Nome do contato..."
-                    value={newPersonName}
-                    onChange={(e) => setNewPersonName(e.target.value)}
-                    className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleQuickAddPerson}
-                    className="px-2.5 py-1 text-xs font-semibold bg-emerald-500 text-white dark:text-slate-950 rounded-lg"
-                  >
-                    Salvar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowQuickPerson(false)}
-                    className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <span>Novo Contato</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickPerson(false)}
+                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <input
+                      type="text"
+                      placeholder="Nome do contato..."
+                      value={newPersonName}
+                      onChange={(e) => setNewPersonName(e.target.value)}
+                      className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleQuickAddPerson}
+                      className="px-2.5 py-1 text-xs font-semibold bg-emerald-500 text-white dark:text-slate-950 rounded-lg cursor-pointer"
+                    >
+                      Salvar
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <select
-                  value={personId}
-                  onChange={(e) => setPersonId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500 transition cursor-pointer"
-                >
-                  <option value="">Nenhum (Despesa própria de Lucas)</option>
-                  {people.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                      <User className="w-3.5 h-3.5 text-slate-500" />
+                      Terceiro / Contato
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickPerson(true)}
+                      className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" /> Novo
+                    </button>
+                  </div>
+                  <SelectDropdown
+                    value={personId}
+                    onChange={(e) => setPersonId(e.target.value)}
+                  >
+                    <option value="">Nenhum (Despesa própria de Lucas)</option>
+                    {people.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </SelectDropdown>
+                </div>
               )}
             </div>
 
             {/* Payment Method */}
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center gap-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
                 <CreditCard className="w-3.5 h-3.5 text-slate-500" />
                 Método de Pagamento
               </label>
-              <select
+              <SelectDropdown
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500 transition cursor-pointer"
               >
                 {paymentMethods.length > 0 ? (
                   paymentMethods.map((m) => (
@@ -560,64 +559,45 @@ export function TransactionModal({
                     <option value="Pix Crédito">Pix Crédito</option>
                   </>
                 )}
-              </select>
+              </SelectDropdown>
             </div>
           </div>
 
           {/* Parcelamento Livre & Status Pago */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1 flex items-center justify-between">
-                <span className="flex items-center gap-1">
-                  <Layers className="w-3.5 h-3.5 text-slate-500" />
-                  Número de Parcelas
-                </span>
-                {installmentPreview && (
-                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
-                    {installmentsNum}x de R$ {installmentPreview}
-                  </span>
-                )}
-              </label>
-              <input
+              <TextInput
+                label="Número de Parcelas"
                 type="number"
                 min="1"
                 max="99"
                 disabled={isEditing}
-                placeholder="1 (À vista) ou qualquer valor (ex: 7, 18, 36)"
+                placeholder="1 (À vista) ou ex: 12"
                 value={totalInstallments}
                 onChange={(e) => setTotalInstallments(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500 transition disabled:opacity-50"
+                leftIcon={<Layers className="w-4 h-4 text-slate-500" />}
+                badge={installmentPreview ? `${installmentsNum}x de R$ ${installmentPreview}` : undefined}
+                helperText={isEditing ? 'O parcelamento já foi gerado nesta transação.' : undefined}
               />
-              {isEditing && (
-                <p className="text-[10px] text-slate-400 mt-0.5">O parcelamento já foi gerado.</p>
-              )}
             </div>
-            <div className="pt-4">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={paid}
-                  onChange={(e) => setPaid(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-emerald-500 focus:ring-emerald-500"
-                />
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                  Já está liquidado/pago?
-                </span>
-              </label>
+
+            <div className="pb-2">
+              <Checkbox
+                label="Já está liquidado/pago?"
+                description="Abate imediatamente do saldo da carteira"
+                checked={paid}
+                onChange={(val) => setPaid(val)}
+              />
             </div>
           </div>
 
           {/* Notes */}
           <div>
-            <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-              Observações (opcional)
-            </label>
-            <input
-              type="text"
+            <TextInput
+              label="Observações (opcional)"
               placeholder="Ex: Adiantamento para o Pai, comprado na promoção..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-sm focus:outline-none focus:border-emerald-500 transition"
             />
           </div>
 

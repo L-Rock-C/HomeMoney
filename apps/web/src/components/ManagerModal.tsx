@@ -1,58 +1,49 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  X,
   Tag,
-  Users,
   CreditCard,
-  Wallet,
   Plus,
   Trash2,
+  X,
   Edit2,
   Check,
-  PiggyBank,
-  Sparkles,
+  Layers,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
 import {
   createCategory,
   updateCategory,
   deleteCategory,
-  createPerson,
-  updatePerson,
-  deletePerson,
   createPaymentMethod,
+  updatePaymentMethod,
   deletePaymentMethod,
-  createAccount,
-  updateAccount,
-  deleteAccount,
 } from '../lib/api';
+import { TextInput, Checkbox } from './ui/FormControls';
 
 interface ManagerModalProps {
   isOpen: boolean;
   onClose: () => void;
   categories: any[];
-  people: any[];
   paymentMethods: any[];
-  accounts: any[];
   onRefreshData: () => void;
-  initialSection?: 'CATEGORIES' | 'PEOPLE' | 'PAYMENTS' | 'WALLETS';
+  initialSection?: 'CATEGORIES' | 'PAYMENTS';
 }
 
 export function ManagerModal({
   isOpen,
   onClose,
   categories,
-  people,
   paymentMethods,
-  accounts,
   onRefreshData,
   initialSection = 'CATEGORIES',
 }: ManagerModalProps) {
-  const [activeSection, setActiveSection] = useState<'CATEGORIES' | 'PEOPLE' | 'PAYMENTS' | 'WALLETS'>(initialSection);
+  const [activeSection, setActiveSection] = useState<'CATEGORIES' | 'PAYMENTS'>(initialSection);
 
   // Refresh data when modal opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       onRefreshData();
       setError(null);
@@ -64,17 +55,9 @@ export function ManagerModal({
   // Input states
   const [newCatName, setNewCatName] = useState('');
   const [newCatIsIncome, setNewCatIsIncome] = useState(false);
-  
-  const [newPersonName, setNewPersonName] = useState('');
-  const [newPersonNotes, setNewPersonNotes] = useState('');
-
   const [newMethodName, setNewMethodName] = useState('');
 
-  const [newWalletName, setNewWalletName] = useState('');
-  const [newWalletType, setNewWalletType] = useState('SAVINGS');
-  const [newWalletBalance, setNewWalletBalance] = useState('0');
-
-  // Editing state
+  // Inline edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
 
@@ -84,10 +67,11 @@ export function ManagerModal({
 
   if (!isOpen) return null;
 
-  function handleSwitchSection(section: 'CATEGORIES' | 'PEOPLE' | 'PAYMENTS' | 'WALLETS') {
+  function handleSwitchSection(section: 'CATEGORIES' | 'PAYMENTS') {
     setActiveSection(section);
     setError(null);
     setSuccessMessage(null);
+    setEditingId(null);
   }
 
   // Category Actions
@@ -100,10 +84,26 @@ export function ManagerModal({
     try {
       await createCategory({ name: newCatName.trim(), isIncome: newCatIsIncome });
       setNewCatName('');
-      setSuccessMessage('Categoria salva com sucesso!');
+      setNewCatIsIncome(false);
+      setSuccessMessage('Categoria criada com sucesso!');
       onRefreshData();
     } catch (err: any) {
       setError(err.message || 'Erro ao adicionar categoria');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSaveEditCategory(id: string) {
+    if (!editName.trim()) return;
+    setLoading(true);
+    try {
+      await updateCategory(id, { name: editName.trim() });
+      setEditingId(null);
+      setSuccessMessage('Categoria atualizada!');
+      onRefreshData();
+    } catch (err: any) {
+      setError(err.message || 'Erro ao atualizar categoria');
     } finally {
       setLoading(false);
     }
@@ -122,39 +122,6 @@ export function ManagerModal({
     }
   }
 
-  // Person Actions
-  async function handleAddPerson(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newPersonName.trim()) return;
-    setLoading(true);
-    setError(null);
-    setSuccessMessage(null);
-    try {
-      await createPerson({ name: newPersonName.trim(), notes: newPersonNotes || null });
-      setNewPersonName('');
-      setNewPersonNotes('');
-      setSuccessMessage('Contato salvo com sucesso!');
-      onRefreshData();
-    } catch (err: any) {
-      setError(err.message || 'Erro ao adicionar contato');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleDeletePerson(id: string) {
-    if (!confirm('Deseja excluir este contato?')) return;
-    setError(null);
-    setSuccessMessage(null);
-    try {
-      await deletePerson(id);
-      setSuccessMessage('Contato removido com sucesso!');
-      onRefreshData();
-    } catch (err: any) {
-      setError(err.message || 'Erro ao excluir contato');
-    }
-  }
-
   // Payment Method Actions
   async function handleAddPaymentMethod(e: React.FormEvent) {
     e.preventDefault();
@@ -165,10 +132,25 @@ export function ManagerModal({
     try {
       await createPaymentMethod({ name: newMethodName.trim() });
       setNewMethodName('');
-      setSuccessMessage('Método de pagamento salvo com sucesso!');
+      setSuccessMessage('Método de pagamento adicionado!');
       onRefreshData();
     } catch (err: any) {
       setError(err.message || 'Erro ao adicionar método');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSaveEditMethod(id: string) {
+    if (!editName.trim()) return;
+    setLoading(true);
+    try {
+      await updatePaymentMethod(id, { name: editName.trim() });
+      setEditingId(null);
+      setSuccessMessage('Método de pagamento atualizado!');
+      onRefreshData();
+    } catch (err: any) {
+      setError(err.message || 'Erro ao atualizar método');
     } finally {
       setLoading(false);
     }
@@ -180,61 +162,25 @@ export function ManagerModal({
     setSuccessMessage(null);
     try {
       await deletePaymentMethod(id);
-      setSuccessMessage('Método de pagamento removido com sucesso!');
+      setSuccessMessage('Método de pagamento removido!');
       onRefreshData();
     } catch (err: any) {
       setError(err.message || 'Erro ao excluir método de pagamento');
     }
   }
 
-  // Wallet Actions
-  async function handleAddWallet(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newWalletName.trim()) return;
-    setLoading(true);
-    setError(null);
-    setSuccessMessage(null);
-    try {
-      const initial = parseFloat(newWalletBalance.replace(',', '.')) || 0;
-      await createAccount({ name: newWalletName.trim(), type: newWalletType, initialBalance: initial });
-      setNewWalletName('');
-      setNewWalletBalance('0');
-      setSuccessMessage('Carteira salva com sucesso!');
-      onRefreshData();
-    } catch (err: any) {
-      setError(err.message || 'Erro ao adicionar carteira');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleDeleteWallet(id: string) {
-    if (!confirm('Deseja excluir esta carteira/poupança? As transações associadas serão afetadas.')) return;
-    setError(null);
-    setSuccessMessage(null);
-    try {
-      await deleteAccount(id);
-      setSuccessMessage('Carteira removida com sucesso!');
-      onRefreshData();
-    } catch (err: any) {
-      setError(err.message || 'Erro ao excluir carteira');
-    }
-  }
-
-  const formatBRL = (val: number) =>
-    val?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00';
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
+        <div className="px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
           <div>
             <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Layers className="w-5 h-5 text-emerald-500" />
               Gerenciador de Cadastros
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Personalize categorias, carteiras e métodos de pagamento
+              Personalize categorias de receitas/despesas e métodos de pagamento
             </p>
           </div>
           <button
@@ -245,13 +191,13 @@ export function ManagerModal({
           </button>
         </div>
 
-        {/* Section Tabs */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-950/40 px-3 sm:px-6 gap-2 overflow-x-auto scrollbar-none">
+        {/* Section Tabs (only Categories & Payment Methods) */}
+        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-950/40 px-3 sm:px-6 gap-2">
           <button
             onClick={() => handleSwitchSection('CATEGORIES')}
-            className={`py-3 px-3 text-xs font-semibold border-b-2 transition flex items-center gap-1.5 whitespace-nowrap ${
+            className={`py-3 px-4 text-xs font-semibold border-b-2 transition flex items-center gap-2 cursor-pointer ${
               activeSection === 'CATEGORIES'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'
             }`}
           >
@@ -260,34 +206,10 @@ export function ManagerModal({
           </button>
 
           <button
-            onClick={() => handleSwitchSection('WALLETS')}
-            className={`py-3 px-3 text-xs font-semibold border-b-2 transition flex items-center gap-1.5 whitespace-nowrap ${
-              activeSection === 'WALLETS'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'
-            }`}
-          >
-            <PiggyBank className="w-4 h-4" />
-            Carteiras & Poupanças ({accounts.length})
-          </button>
-
-          <button
-            onClick={() => handleSwitchSection('PEOPLE')}
-            className={`py-3 px-3 text-xs font-semibold border-b-2 transition flex items-center gap-1.5 whitespace-nowrap ${
-              activeSection === 'PEOPLE'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            Contatos / Terceiros ({people.length})
-          </button>
-
-          <button
             onClick={() => handleSwitchSection('PAYMENTS')}
-            className={`py-3 px-3 text-xs font-semibold border-b-2 transition flex items-center gap-1.5 whitespace-nowrap ${
+            className={`py-3 px-4 text-xs font-semibold border-b-2 transition flex items-center gap-2 cursor-pointer ${
               activeSection === 'PAYMENTS'
-                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+                ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'
             }`}
           >
@@ -297,18 +219,18 @@ export function ManagerModal({
         </div>
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
           {error && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-600 dark:text-rose-400 text-sm flex items-center justify-between">
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-600 dark:text-rose-400 text-xs sm:text-sm flex items-center justify-between">
               <span>{error}</span>
-              <button onClick={() => setError(null)} className="text-xs font-bold hover:underline">✕</button>
+              <button onClick={() => setError(null)} className="text-xs font-bold hover:underline cursor-pointer">✕</button>
             </div>
           )}
 
           {successMessage && (
-            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-700 dark:text-emerald-300 text-sm flex items-center justify-between">
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm flex items-center justify-between">
               <span>{successMessage}</span>
-              <button onClick={() => setSuccessMessage(null)} className="text-xs font-bold hover:underline">✕</button>
+              <button onClick={() => setSuccessMessage(null)} className="text-xs font-bold hover:underline cursor-pointer">✕</button>
             </div>
           )}
 
@@ -318,58 +240,112 @@ export function ManagerModal({
           {activeSection === 'CATEGORIES' && (
             <div className="space-y-4">
               {/* Add Category Form */}
-              <form onSubmit={handleAddCategory} className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-3">
-                <input
-                  type="text"
-                  required
-                  placeholder="Nova categoria (ex: Viagem, Saúde)..."
-                  value={newCatName}
-                  onChange={(e) => setNewCatName(e.target.value)}
-                  className="flex-1 min-w-[200px] px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                />
+              <form onSubmit={handleAddCategory} className="p-4 bg-slate-50/80 dark:bg-slate-950/70 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+                  <div className="flex-1">
+                    <TextInput
+                      label="Nome da Categoria"
+                      required
+                      placeholder="Ex: Supermercado, Lazer, Salário, Saúde..."
+                      value={newCatName}
+                      onChange={(e) => setNewCatName(e.target.value)}
+                    />
+                  </div>
 
-                <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={newCatIsIncome}
-                    onChange={(e) => setNewCatIsIncome(e.target.checked)}
-                    className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-500"
-                  />
-                  <span>É Receita?</span>
-                </label>
+                  <div className="flex items-center justify-between sm:justify-start gap-4 pb-1 sm:pb-0">
+                    <Checkbox
+                      label="É Receita?"
+                      checked={newCatIsIncome}
+                      onChange={(val) => setNewCatIsIncome(val)}
+                      className="whitespace-nowrap"
+                    />
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Adicionar Categoria
-                </button>
+                    <button
+                      type="submit"
+                      disabled={loading || !newCatName.trim()}
+                      className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                    >
+                      <Plus className="w-4 h-4 stroke-[3]" /> Adicionar
+                    </button>
+                  </div>
+                </div>
               </form>
 
               {/* Categories List */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {categories.map((c) => (
                   <div
                     key={c.id}
-                    className="p-3 rounded-xl bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between group"
+                    className="p-3 rounded-xl bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition"
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                      <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{c.name}</span>
-                      {c.isIncome && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
-                          Receita
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => handleDeleteCategory(c.id)}
-                      className="p-1 rounded text-slate-400 hover:text-rose-500 opacity-60 group-hover:opacity-100 transition"
-                      title="Excluir"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {editingId === c.id ? (
+                      <div className="flex items-center gap-2 flex-1 mr-2">
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-slate-900 border border-emerald-500 rounded-lg text-slate-900 dark:text-white focus:outline-none"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveEditCategory(c.id)}
+                          className="p-1 rounded bg-emerald-500 text-white hover:bg-emerald-400"
+                          title="Salvar"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                          className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                          title="Cancelar"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                              c.isIncome
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                            }`}
+                          >
+                            {c.isIncome ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+                          </div>
+                          <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{c.name}</span>
+                          {c.isIncome && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
+                              Receita
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingId(c.id);
+                              setEditName(c.name);
+                            }}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                            title="Editar nome"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCategory(c.id)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -377,203 +353,94 @@ export function ManagerModal({
           )}
 
           {/* ========================================================================= */}
-          {/* SECTION 2: CARTEIRAS & POUPANÇAS */}
-          {/* ========================================================================= */}
-          {activeSection === 'WALLETS' && (
-            <div className="space-y-4">
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-800 dark:text-emerald-300">
-                <strong>Carteiras & Poupanças:</strong> Crie quantas carteiras ou caixinhas de poupança quiser (ex: <em>Reserva de Emergência</em>, <em>Férias</em>, <em>IPVA</em>, <em>Nubank</em>). Ao registrar qualquer transação, você pode selecionar qual carteira/poupança foi utilizada para pagar ou receber.
-              </div>
-
-              {/* Add Wallet Form */}
-              <form onSubmit={handleAddWallet} className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Nome da Carteira / Poupança</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ex: Reserva de Emergência, Caixinha Nubank..."
-                      value={newWalletName}
-                      onChange={(e) => setNewWalletName(e.target.value)}
-                      className="w-full px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Tipo</label>
-                    <select
-                      value={newWalletType}
-                      onChange={(e) => setNewWalletType(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                    >
-                      <option value="CHECKING">Conta Corrente / Principal</option>
-                      <option value="SAVINGS">Poupança / Caixinha</option>
-                      <option value="WALLET">Carteira Dinheiro</option>
-                      <option value="INVESTMENT">Investimentos</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500 dark:text-slate-400">Saldo Inicial:</span>
-                    <input
-                      type="text"
-                      placeholder="0,00"
-                      value={newWalletBalance}
-                      onChange={(e) => setNewWalletBalance(e.target.value)}
-                      className="w-24 px-2 py-1 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white font-medium"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Criar Carteira / Poupança
-                  </button>
-                </div>
-              </form>
-
-              {/* Wallets List */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {accounts.map((a) => (
-                  <div
-                    key={a.id}
-                    className="p-4 rounded-xl bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between group shadow-sm"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <PiggyBank className="w-4 h-4 text-emerald-500" />
-                        <span className="text-sm font-bold text-slate-900 dark:text-white">{a.name}</span>
-                      </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Tipo: <span className="font-semibold text-slate-700 dark:text-slate-300">
-                          {a.type === 'SAVINGS' ? 'Poupança / Caixinha' : a.type === 'CHECKING' ? 'Conta Principal' : 'Carteira'}
-                        </span>
-                      </div>
-                      <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                        Saldo: {formatBRL(a.currentBalance)}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => handleDeleteWallet(a.id)}
-                      className="p-1.5 rounded text-slate-400 hover:text-rose-500 opacity-60 group-hover:opacity-100 transition"
-                      title="Excluir"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================================= */}
-          {/* SECTION 3: PEOPLE / CONTACTS */}
-          {/* ========================================================================= */}
-          {activeSection === 'PEOPLE' && (
-            <div className="space-y-4">
-              {/* Add Person Form */}
-              <form onSubmit={handleAddPerson} className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-3">
-                <input
-                  type="text"
-                  required
-                  placeholder="Nome do contato (ex: Pai, Lelê, Amigo)..."
-                  value={newPersonName}
-                  onChange={(e) => setNewPersonName(e.target.value)}
-                  className="flex-1 min-w-[200px] px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                />
-
-                <input
-                  type="text"
-                  placeholder="Observação (opcional)..."
-                  value={newPersonNotes}
-                  onChange={(e) => setNewPersonNotes(e.target.value)}
-                  className="flex-1 min-w-[150px] px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                />
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Adicionar Contato
-                </button>
-              </form>
-
-              {/* People List */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {people.map((p) => (
-                  <div
-                    key={p.id}
-                    className="p-3 rounded-xl bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between group"
-                  >
-                    <div>
-                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{p.name}</span>
-                      {p.notes && <p className="text-xs text-slate-400">{p.notes}</p>}
-                    </div>
-
-                    <button
-                      onClick={() => handleDeletePerson(p.id)}
-                      className="p-1 rounded text-slate-400 hover:text-rose-500 opacity-60 group-hover:opacity-100 transition"
-                      title="Excluir"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================================= */}
-          {/* SECTION 4: PAYMENT METHODS */}
+          {/* SECTION 2: PAYMENT METHODS */}
           {/* ========================================================================= */}
           {activeSection === 'PAYMENTS' && (
             <div className="space-y-4">
               {/* Add Payment Method Form */}
-              <form onSubmit={handleAddPaymentMethod} className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center gap-3">
-                <input
-                  type="text"
-                  required
-                  placeholder="Novo método de pagamento (ex: Vale Alimentação, Cartão XP, NuPay)..."
-                  value={newMethodName}
-                  onChange={(e) => setNewMethodName(e.target.value)}
-                  className="flex-1 px-3.5 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
-                />
-
+              <form onSubmit={handleAddPaymentMethod} className="p-4 bg-slate-50/80 dark:bg-slate-950/70 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-end gap-3">
+                <div className="flex-1">
+                  <TextInput
+                    label="Novo Método de Pagamento"
+                    required
+                    placeholder="Ex: Cartão Nubank, VR Refeição, Pix..."
+                    value={newMethodName}
+                    onChange={(e) => setNewMethodName(e.target.value)}
+                  />
+                </div>
                 <button
                   type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5"
+                  disabled={loading || !newMethodName.trim()}
+                  className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
                 >
-                  <Plus className="w-3.5 h-3.5" /> Adicionar Método
+                  <Plus className="w-4 h-4 stroke-[3]" /> Adicionar
                 </button>
               </form>
 
               {/* Payment Methods List */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {paymentMethods.map((m) => (
                   <div
                     key={m.id}
-                    className="p-3 rounded-xl bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between group"
+                    className="p-3 rounded-xl bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 flex items-center justify-between group hover:border-slate-300 dark:hover:border-slate-700 transition"
                   >
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="w-4 h-4 text-emerald-500" />
-                      <span className="text-sm font-medium text-slate-800 dark:text-slate-200">{m.name}</span>
-                    </div>
-
-                    <button
-                      onClick={() => handleDeletePaymentMethod(m.id)}
-                      className="p-1 rounded text-slate-400 hover:text-rose-500 opacity-60 group-hover:opacity-100 transition"
-                      title="Excluir"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {editingId === m.id ? (
+                      <div className="flex items-center gap-2 flex-1 mr-2">
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-slate-900 border border-emerald-500 rounded-lg text-slate-900 dark:text-white focus:outline-none"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveEditMethod(m.id)}
+                          className="p-1 rounded bg-emerald-500 text-white hover:bg-emerald-400"
+                          title="Salvar"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                          className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                          title="Cancelar"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                            <CreditCard className="w-3.5 h-3.5" />
+                          </div>
+                          <span className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{m.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingId(m.id);
+                              setEditName(m.name);
+                            }}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                            title="Editar nome"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePaymentMethod(m.id)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

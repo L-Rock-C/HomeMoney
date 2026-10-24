@@ -35,6 +35,8 @@ import {
   LogOut,
   FolderOpen,
   UserCheck,
+  BellRing,
+  Sparkles,
 } from 'lucide-react';
 import {
   fetchMonthlyReports,
@@ -54,6 +56,7 @@ import {
 import { TransactionModal } from '../components/TransactionModal';
 import { SettleModal } from '../components/SettleModal';
 import { ManagerModal } from '../components/ManagerModal';
+import { WalletModal } from '../components/WalletModal';
 import { ProfileContactsView } from '../components/ProfileContactsView';
 import { CategoryDonutChart, MonthlyBarChart } from '../components/FinanceCharts';
 
@@ -107,7 +110,41 @@ export default function HomePage() {
   const [transactionToEdit, setTransactionToEdit] = useState<any | null>(null);
   const [settlePerson, setSettlePerson] = useState<any | null>(null);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
-  const [managerSection, setManagerSection] = useState<'CATEGORIES' | 'PEOPLE' | 'PAYMENTS' | 'WALLETS'>('CATEGORIES');
+  const [managerSection, setManagerSection] = useState<'CATEGORIES' | 'PAYMENTS'>('CATEGORIES');
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [walletToEdit, setWalletToEdit] = useState<any | null>(null);
+
+  // Monitoramento / Notificação de Compras Detectadas (Conciliação Inteligente)
+  const [detectedTransaction, setDetectedTransaction] = useState<any | null>({
+    source: 'Nubank',
+    description: 'Pix para Allison Araújo',
+    amount: '80,00',
+    type: 'EXPENSE',
+    paymentMethod: 'Pix',
+    date: '2026-10-13',
+    rawTime: '14:23',
+    bank: 'Nubank',
+  });
+
+  const handleReconcileDetected = () => {
+    if (!detectedTransaction) return;
+    const nubankAcc = accounts.find((a) => a.name.toLowerCase().includes('nubank')) || accounts[0];
+    setTransactionToEdit({
+      id: undefined,
+      description: detectedTransaction.description,
+      amount: parseFloat(detectedTransaction.amount.replace(',', '.')),
+      type: detectedTransaction.type,
+      paymentMethod: detectedTransaction.paymentMethod,
+      purchaseDate: detectedTransaction.date,
+      dueDate: detectedTransaction.date,
+      accountId: nubankAcc?.id || (accounts[0]?.id || ''),
+      notes: `Lançamento capturado via Notificação ${detectedTransaction.bank} (${detectedTransaction.date} às ${detectedTransaction.rawTime})`,
+      paid: true,
+      totalInstallments: 1,
+    });
+    setDetectedTransaction(null);
+    setIsModalOpen(true);
+  };
 
   // Initialize theme and authenticate user
   useEffect(() => {
@@ -707,6 +744,49 @@ export default function HomePage() {
           {/* ========================================================================= */}
           {activeTab !== 'PROFILE' && (
             <>
+              {/* Smart Purchase Detection & Reconcile Banner */}
+              {activeTab === 'DASHBOARD' && detectedTransaction && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-violet-500/10 via-emerald-500/10 to-teal-500/10 border border-emerald-500/30 shadow-lg shadow-emerald-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300">
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-violet-600/20 text-violet-400 border border-violet-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                      <BellRing className="w-5 h-5 animate-pulse text-violet-500 dark:text-violet-400" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-600 dark:text-violet-300 border border-violet-500/30">
+                          Notificação {detectedTransaction.bank} Detectada
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          {detectedTransaction.date} às {detectedTransaction.rawTime}
+                        </span>
+                      </div>
+                      <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
+                        {detectedTransaction.description} •{' '}
+                        <span className="text-rose-500 font-extrabold">R$ {detectedTransaction.amount}</span>
+                      </h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                        Transferência capturada em segundo plano. Deseja classificar a categoria e confirmar de onde saiu esse valor?
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                    <button
+                      onClick={() => setDetectedTransaction(null)}
+                      className="px-3 py-2 text-xs font-semibold rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                    >
+                      Dispensar
+                    </button>
+                    <button
+                      onClick={handleReconcileDetected}
+                      className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/25 transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4" /> Conciliar Agora
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Styled Date Search & Filter Bar */}
               <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -965,8 +1045,8 @@ export default function HomePage() {
                       Carteiras & Poupanças
                     </h3>
                     <button
-                      onClick={() => setIsManagerOpen(true)}
-                      className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+                      onClick={() => setActiveTab('WALLETS')}
+                      className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline cursor-pointer"
                     >
                       Gerenciar
                     </button>
@@ -976,7 +1056,8 @@ export default function HomePage() {
                     {accounts.map((a) => (
                       <div
                         key={a.id}
-                        className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/60 flex items-center justify-between"
+                        onClick={() => setActiveTab('WALLETS')}
+                        className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/60 flex items-center justify-between cursor-pointer hover:border-emerald-500/40 transition"
                       >
                         <div className="flex items-center gap-2">
                           <div
@@ -1392,10 +1473,10 @@ export default function HomePage() {
                 </div>
                 <button
                   onClick={() => {
-                    setManagerSection('WALLETS');
-                    setIsManagerOpen(true);
+                    setWalletToEdit(null);
+                    setIsWalletModalOpen(true);
                   }}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/20 transition flex items-center gap-1.5 self-start sm:self-auto"
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/20 transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
                 >
                   <Plus className="w-4 h-4 stroke-[3]" />
                   Nova Carteira / Poupança
@@ -1533,10 +1614,10 @@ export default function HomePage() {
                       </button>
                       <button
                         onClick={() => {
-                          setManagerSection('WALLETS');
-                          setIsManagerOpen(true);
+                          setWalletToEdit(acc);
+                          setIsWalletModalOpen(true);
                         }}
-                        className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                        className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                         title="Configurar Carteira"
                       >
                         <Settings className="w-4 h-4" />
@@ -1597,11 +1678,19 @@ export default function HomePage() {
         isOpen={isManagerOpen}
         onClose={() => setIsManagerOpen(false)}
         categories={categories}
-        people={people}
         paymentMethods={paymentMethods}
-        accounts={accounts}
         onRefreshData={loadInitialData}
-        initialSection={managerSection}
+        initialSection={managerSection === 'PAYMENTS' ? 'PAYMENTS' : 'CATEGORIES'}
+      />
+
+      <WalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => {
+          setIsWalletModalOpen(false);
+          setWalletToEdit(null);
+        }}
+        onSuccess={loadInitialData}
+        walletToEdit={walletToEdit}
       />
     </div>
   );
