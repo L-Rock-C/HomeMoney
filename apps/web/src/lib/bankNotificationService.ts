@@ -40,13 +40,23 @@ export const BANK_RULES: BankRule[] = [
   {
     bank: 'Nubank',
     color: '#820AD1',
-    packages: ['com.nu.production'],
+    packages: ['com.nu.production', 'com.nubank'],
     patterns: [
-      // Pix Enviado: "Você transferiu R$ 80,00 para Allison Araújo no Pix."
+      // Pix Enviado: "Você transferiu R$ 80,00 para Allison Araújo no Pix." ou "Pix enviado: R$ 80,00 para Fulano"
       {
         type: 'EXPENSE',
         method: 'Pix',
-        regex: /(?:transferiu|enviou)\s+R\$\s*([0-9.,]+)\s+para\s+([^.]+?)(?:\s+no\s+Pix|\s+pelo\s+Pix|\.|$)/i,
+        regex: /(?:transferiu|enviou|pagou|transferência\s+(?:enviada|realizada|de)|pix\s+(?:enviado|realizado|de))\s*:?\s*(?:de\s*)?R\$\s*([0-9.,]+)\s+(?:para|a)\s+([^.]+?)(?:\s+no\s+Pix|\s+pelo\s+Pix|\s+via\s+Pix|\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+      // Padrão genérico de Pix enviado: "R$ 80,00 para Allison Araújo no Pix"
+      {
+        type: 'EXPENSE',
+        method: 'Pix',
+        regex: /R\$\s*([0-9.,]+)\s+(?:enviado\s+)?para\s+([^.]+?)(?:\s+no\s+Pix|\s+pelo\s+Pix|\s+via\s+Pix|\.|$)/i,
         extract: (m) => ({
           amount: parseBRLAmount(m[1]),
           targetOrSource: cleanName(m[2]),
@@ -56,21 +66,26 @@ export const BANK_RULES: BankRule[] = [
       {
         type: 'EXPENSE',
         method: 'Crédito',
-        regex: /compra\s+de\s+R\$\s*([0-9.,]+)\s+aprovada.*?(?:em|no|na)\s+([^.]+?)(?:\.|$)/i,
+        regex: /(?:compra|pagamento).*?R\$\s*([0-9.,]+).*?(?:em|no|na)\s+([^.]+?)(?:\.|$)/i,
         extract: (m) => ({
           amount: parseBRLAmount(m[1]),
           targetOrSource: cleanName(m[2]),
         }),
       },
-      // Pix Recebido: "Você recebeu uma transferência Pix de R$ 150,00 de Fulano."
+      // Pix Recebido: "Você recebeu uma transferência Pix de R$ 150,00 de Fulano." ou "Fulano te enviou um Pix de R$ 150,00"
       {
         type: 'INCOME',
         method: 'Pix',
-        regex: /recebeu\s+(?:uma\s+transferência\s+Pix\s+de|um\s+Pix\s+de)\s+R\$\s*([0-9.,]+)\s+de\s+([^.]+?)(?:\.|$)/i,
-        extract: (m) => ({
-          amount: parseBRLAmount(m[1]),
-          targetOrSource: cleanName(m[2]),
-        }),
+        regex: /(?:recebeu\s+(?:uma\s+transferência(?:\s+Pix)?\s+de|um\s+Pix\s+de|R\$\s*([0-9.,]+))|te\s+enviou\s+(?:um\s+Pix\s+de\s*)?R\$\s*([0-9.,]+)|recebido\s*:?\s*R\$\s*([0-9.,]+))/i,
+        extract: (m) => {
+          const amountStr = m[1] || m[2] || m[3] || '0';
+          // Tenta extrair o nome de quem enviou se houver
+          const nameMatch = m.input ? m.input.match(/(?:de|de\s+parte\s+de)\s+([^.]+?)(?:\.|$)/i) : null;
+          return {
+            amount: parseBRLAmount(amountStr),
+            targetOrSource: cleanName(nameMatch ? nameMatch[1] : 'Transferência Nubank'),
+          };
+        },
       },
     ],
   },
@@ -79,13 +94,13 @@ export const BANK_RULES: BankRule[] = [
   {
     bank: 'BB',
     color: '#FBF800',
-    packages: ['br.com.bb.android'],
+    packages: ['br.com.bb.android', 'bancodobrasil'],
     patterns: [
       // Pix Enviado: "BB: Pix enviado no valor de R$ 120,00 para Carlos Alberto."
       {
         type: 'EXPENSE',
         method: 'Pix',
-        regex: /Pix\s+enviado\s+no\s+valor\s+de\s+R\$\s*([0-9.,]+)\s+para\s+([^.]+?)(?:\.|$)/i,
+        regex: /Pix\s+(?:enviado|realizado).*?(?:valor\s+de\s+)?R\$\s*([0-9.,]+)\s+para\s+([^.]+?)(?:\.|$)/i,
         extract: (m) => ({
           amount: parseBRLAmount(m[1]),
           targetOrSource: cleanName(m[2]),
@@ -105,7 +120,7 @@ export const BANK_RULES: BankRule[] = [
       {
         type: 'INCOME',
         method: 'Pix',
-        regex: /Pix\s+recebido\s+no\s+valor\s+de\s+R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        regex: /Pix\s+recebido.*?(?:valor\s+de\s+)?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
         extract: (m) => ({
           amount: parseBRLAmount(m[1]),
           targetOrSource: cleanName(m[2] || 'Transferência BB'),
@@ -476,6 +491,38 @@ export function getInitialMockNotifications(): BankNotification[] {
 }
 
 // ============================================================================
+// Status e Ações da Ponte Nativa Android
+// ============================================================================
+export interface AndroidBridgeStatus {
+  isAvailable: boolean;
+  isPermissionGranted: boolean;
+}
+
+export function getAndroidBridgeStatus(): AndroidBridgeStatus {
+  if (typeof window !== 'undefined' && (window as any).AndroidNotificationBridge) {
+    try {
+      const granted = Boolean((window as any).AndroidNotificationBridge.isNotificationAccessGranted());
+      return { isAvailable: true, isPermissionGranted: granted };
+    } catch {
+      return { isAvailable: true, isPermissionGranted: false };
+    }
+  }
+  return { isAvailable: false, isPermissionGranted: false };
+}
+
+export function openAndroidNotificationSettings(): boolean {
+  if (typeof window !== 'undefined' && (window as any).AndroidNotificationBridge) {
+    try {
+      (window as any).AndroidNotificationBridge.openNotificationSettings();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+// ============================================================================
 // Ouvinte do Evento Nativo do Android (Capacitor Bridge)
 // ============================================================================
 if (typeof window !== 'undefined') {
@@ -485,12 +532,30 @@ if (typeof window !== 'undefined') {
       const parsedArray = typeof raw === 'string' ? JSON.parse(raw) : raw;
       if (Array.isArray(parsedArray)) {
         for (const item of parsedArray) {
-          const parsed = parseBankNotificationText(
-            item.text,
-            item.bank as BankNotification['bank'],
-            item.date,
-            item.time
-          );
+          const text = item.text || '';
+          const title = item.title || '';
+          const fullText = title ? `${title}: ${text}` : text;
+
+          const parsed =
+            parseBankNotificationText(
+              text,
+              item.bank as BankNotification['bank'],
+              item.date,
+              item.time
+            ) ||
+            parseBankNotificationText(
+              fullText,
+              item.bank as BankNotification['bank'],
+              item.date,
+              item.time
+            ) ||
+            parseBankNotificationText(
+              title,
+              item.bank as BankNotification['bank'],
+              item.date,
+              item.time
+            );
+
           if (parsed) {
             addIncomingNotification(parsed);
           }
@@ -503,3 +568,4 @@ if (typeof window !== 'undefined') {
     }
   });
 }
+

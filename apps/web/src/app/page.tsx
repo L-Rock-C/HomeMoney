@@ -37,6 +37,7 @@ import {
   UserCheck,
   BellRing,
   Sparkles,
+  History,
 } from 'lucide-react';
 import {
   fetchMonthlyReports,
@@ -600,6 +601,40 @@ export default function HomePage() {
             {!sidebarCollapsed && <span>Perfil & Contatos</span>}
           </button>
 
+          {/* Histórico de Sugestões Bancárias */}
+          <button
+            onClick={() => {
+              setIsHistoryModalOpen(true);
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center ${
+              sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-3'
+            } py-2.5 rounded-xl text-sm font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 relative`}
+            title="Histórico de Sugestões Bancárias"
+          >
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+              <History className="w-5 h-5 min-w-5 shrink-0 text-violet-500" />
+              {!sidebarCollapsed && <span>Histórico de Sugestões</span>}
+            </div>
+            {!sidebarCollapsed && (
+              <div className="flex items-center gap-1">
+                {pendingQueue.length > 0 && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                    {pendingQueue.length}
+                  </span>
+                )}
+                {dismissedCount > 0 && (
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                    {dismissedCount}
+                  </span>
+                )}
+              </div>
+            )}
+            {sidebarCollapsed && (pendingQueue.length > 0 || dismissedCount > 0) && (
+              <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${pendingQueue.length > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+            )}
+          </button>
+
           {/* Gerenciador de Cadastros */}
           <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80">
             <button
@@ -735,89 +770,55 @@ export default function HomePage() {
           {/* ========================================================================= */}
           {activeTab !== 'PROFILE' && (
             <>
-              {/* Smart Multi-Bank Notification Queue Banner */}
-              {activeTab === 'DASHBOARD' && (
+              {/* Smart Multi-Bank Notification Queue Banner - Apenas quando houver sugestões pendentes */}
+              {activeTab === 'DASHBOARD' && pendingQueue.length > 0 && (
                 <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-violet-500/10 via-emerald-500/10 to-teal-500/10 border border-emerald-500/30 shadow-lg shadow-emerald-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300">
                   <div className="flex items-start gap-3.5">
                     <div className="w-10 h-10 rounded-xl bg-violet-600/20 text-violet-400 border border-violet-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                      <BellRing
-                        className={`w-5 h-5 ${
-                          pendingQueue.length > 0
-                            ? 'animate-bounce text-violet-500 dark:text-violet-400'
-                            : 'text-slate-400'
-                        }`}
-                      />
+                      <BellRing className="w-5 h-5 animate-bounce text-violet-500 dark:text-violet-400" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        {pendingQueue.length > 0 ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
-                            {pendingQueue.length} {pendingQueue.length === 1 ? 'Transferência Detectada' : 'Transferências na Fila'}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                            Fila Limpa
-                          </span>
-                        )}
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                          {pendingQueue.length} {pendingQueue.length === 1 ? 'Transferência Detectada' : 'Transferências na Fila'}
+                        </span>
                         <span className="text-xs text-slate-500 dark:text-slate-400">
                           Monitor de Bancos (BB, Caixa, Nubank, Bradesco, Santander, Inter)
                         </span>
                       </div>
 
-                      {pendingQueue.length > 0 ? (
-                        <>
-                          <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
-                            Você tem {pendingQueue.length}{' '}
-                            {pendingQueue.length === 1
-                              ? 'notificação bancária para conciliar'
-                              : 'notificações bancárias para conciliar'}
-                          </h4>
-                          <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                            {pendingQueue.slice(0, 4).map((item) => (
-                              <span
-                                key={item.id}
-                                className="text-[10px] font-semibold px-2 py-0.5 rounded-md text-white shadow-xs"
-                                style={{ backgroundColor: item.bankColor }}
-                              >
-                                {item.bank}: R$ {item.formattedAmount} ({item.targetOrSource})
-                              </span>
-                            ))}
-                            {pendingQueue.length > 4 && (
-                              <span className="text-[10px] text-slate-400">
-                                +{pendingQueue.length - 4} mais
-                              </span>
-                            )}
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
-                            Nenhuma transferência pendente no momento
-                          </h4>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            As notificações dos seus bancos instalados serão capturadas automaticamente em segundo plano.
-                          </p>
-                        </>
-                      )}
+                      <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
+                        Você tem {pendingQueue.length}{' '}
+                        {pendingQueue.length === 1
+                          ? 'notificação bancária para conciliar'
+                          : 'notificações bancárias para conciliar'}
+                      </h4>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                        {pendingQueue.slice(0, 4).map((item) => (
+                          <span
+                            key={item.id}
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-md text-white shadow-xs"
+                            style={{ backgroundColor: item.bankColor }}
+                          >
+                            {item.bank}: R$ {item.formattedAmount} ({item.targetOrSource})
+                          </span>
+                        ))}
+                        {pendingQueue.length > 4 && (
+                          <span className="text-[10px] text-slate-400">
+                            +{pendingQueue.length - 4} mais
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 flex-wrap">
                     <button
-                      onClick={() => setIsHistoryModalOpen(true)}
-                      className="px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800 transition cursor-pointer flex items-center gap-1.5"
+                      onClick={() => setIsQueueModalOpen(true)}
+                      className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/25 transition flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
                     >
-                      Histórico {dismissedCount > 0 ? `(${dismissedCount} dispensadas)` : ''}
+                      <Sparkles className="w-4 h-4" /> Resolver Fila ({pendingQueue.length})
                     </button>
-
-                    {pendingQueue.length > 0 && (
-                      <button
-                        onClick={() => setIsQueueModalOpen(true)}
-                        className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/25 transition flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Sparkles className="w-4 h-4" /> Resolver Fila ({pendingQueue.length})
-                      </button>
-                    )}
                   </div>
                 </div>
               )}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Bell,
   Trash2,
@@ -14,6 +14,9 @@ import {
   Building2,
   Clock,
   History,
+  Smartphone,
+  ShieldCheck,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   BankNotification,
@@ -23,6 +26,9 @@ import {
   addIncomingNotification,
   parseBankNotificationText,
   BANK_RULES,
+  getAndroidBridgeStatus,
+  openAndroidNotificationSettings,
+  AndroidBridgeStatus,
 } from '../lib/bankNotificationService';
 
 interface NotificationHistoryModalProps {
@@ -39,6 +45,23 @@ export function NotificationHistoryModal({
   const [activeTab, setActiveTab] = useState<'DISMISSED' | 'RECONCILED' | 'SIMULATOR'>('DISMISSED');
   const [simText, setSimText] = useState('');
   const [simFeedback, setSimFeedback] = useState<string | null>(null);
+  const [androidStatus, setAndroidStatus] = useState<AndroidBridgeStatus>({
+    isAvailable: false,
+    isPermissionGranted: false,
+  });
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const checkStatus = () => setAndroidStatus(getAndroidBridgeStatus());
+    checkStatus();
+
+    window.addEventListener('focus', checkStatus);
+    window.addEventListener('visibilitychange', checkStatus);
+    return () => {
+      window.removeEventListener('focus', checkStatus);
+      window.removeEventListener('visibilitychange', checkStatus);
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -102,7 +125,7 @@ export function NotificationHistoryModal({
                 Histórico & Notificações Bancárias
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Gerencie notificações dispensadas e simule transações dos 6 maiores bancos
+                Gerencie sugestões dispensadas e status do monitor de bancos
               </p>
             </div>
           </div>
@@ -114,8 +137,65 @@ export function NotificationHistoryModal({
           </button>
         </div>
 
+        {/* Android Native Permission Status Banner */}
+        {androidStatus.isAvailable ? (
+          androidStatus.isPermissionGranted ? (
+            <div className="mx-4 sm:mx-6 mt-3.5 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-emerald-800 dark:text-emerald-200">
+                    Acesso a Notificações Ativo no Celular
+                  </p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                    Nubank, BB, Caixa, Bradesco, Santander e Inter monitorados automaticamente.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white shrink-0">
+                Autorizado
+              </span>
+            </div>
+          ) : (
+            <div className="mx-4 sm:mx-6 mt-3.5 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                    Permissão Necessária no Celular
+                  </p>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                    O Android requer que você autorize o HomeMoney nas configurações do sistema para interceptar transferências bancárias.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => openAndroidNotificationSettings()}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center gap-1.5 shrink-0 shadow-sm cursor-pointer transition hover:scale-105"
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                Autorizar no Android
+              </button>
+            </div>
+          )
+        ) : (
+          <div className="mx-4 sm:mx-6 mt-3.5 p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
+              <Smartphone className="w-4 h-4" />
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+              <span className="font-semibold text-slate-800 dark:text-white">Dica para o Celular (APK):</span> No Android, autorize em{' '}
+              <span className="font-medium underline">Configurações &gt; Apps &gt; Acesso especial &gt; Acesso a notificações &gt; HomeMoney</span>. No navegador/PC, teste abaixo no <span className="font-semibold text-emerald-600 dark:text-emerald-400">Simulador de Bancos</span>.
+            </p>
+          </div>
+        )}
+
         {/* Tab Switcher */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-950/40 px-4 sm:px-6 gap-2">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-950/40 px-4 sm:px-6 gap-2 mt-2">
           <button
             onClick={() => setActiveTab('DISMISSED')}
             className={`py-3 px-3.5 text-xs font-semibold border-b-2 transition flex items-center gap-2 cursor-pointer ${

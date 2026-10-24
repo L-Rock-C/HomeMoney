@@ -2,6 +2,7 @@ package com.homemoney.app;
 
 import android.app.Notification;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.service.notification.NotificationListenerService;
@@ -28,24 +29,26 @@ public class BankNotificationListener extends NotificationListenerService {
         String packageName = sbn.getPackageName();
         if (packageName == null) return;
 
+        String pkgLower = packageName.toLowerCase();
+
         // Filtro estrito: apenas os 6 maiores bancos brasileiros
         String matchedBank = null;
-        if (packageName.contains("nu.production")) {
+        if (pkgLower.contains("nu.production") || pkgLower.contains("nubank")) {
             matchedBank = "Nubank";
-        } else if (packageName.contains("bb.android")) {
+        } else if (pkgLower.contains("bb.android") || pkgLower.contains("bancodobrasil")) {
             matchedBank = "BB";
-        } else if (packageName.contains("gabba.Caixa") || packageName.contains("caixa.tem")) {
+        } else if (pkgLower.contains("gabba.caixa") || pkgLower.contains("caixa.tem") || pkgLower.contains("br.gov.caixa")) {
             matchedBank = "Caixa";
-        } else if (packageName.contains("bradesco")) {
+        } else if (pkgLower.contains("bradesco")) {
             matchedBank = "Bradesco";
-        } else if (packageName.contains("santander")) {
+        } else if (pkgLower.contains("santander")) {
             matchedBank = "Santander";
-        } else if (packageName.contains("intermedium")) {
+        } else if (pkgLower.contains("intermedium") || pkgLower.contains("bancointer") || pkgLower.contains("banco.inter")) {
             matchedBank = "Inter";
         }
 
         if (matchedBank == null) {
-            return; // Notificação de outro app qualquer (WhatsApp, Instagram, etc) ignorada
+            return; // Notificação de outro app qualquer ignorada
         }
 
         try {
@@ -55,14 +58,25 @@ public class BankNotificationListener extends NotificationListenerService {
 
             CharSequence titleChar = extras.getCharSequence(Notification.EXTRA_TITLE);
             CharSequence textChar = extras.getCharSequence(Notification.EXTRA_TEXT);
+            CharSequence bigTextChar = extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
 
             String title = titleChar != null ? titleChar.toString() : "";
             String text = textChar != null ? textChar.toString() : "";
 
+            if (text.isEmpty() && bigTextChar != null) {
+                text = bigTextChar.toString();
+            } else if (bigTextChar != null && bigTextChar.length() > text.length()) {
+                text = bigTextChar.toString();
+            }
+
+            if (text.isEmpty() && !title.isEmpty()) {
+                text = title;
+            }
+
             if (text.isEmpty()) return;
 
-            // Log de diagnóstico
-            Log.d(TAG, "Notificação bancária capturada [" + matchedBank + "]: " + text);
+            // Log de diagnóstico no Logcat do Android Studio
+            Log.d(TAG, "Notificação bancária capturada [" + matchedBank + "]: " + title + " | " + text);
 
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
             SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
@@ -86,8 +100,16 @@ public class BankNotificationListener extends NotificationListenerService {
             prefs.edit().putString(KEY_PENDING, array.toString()).apply();
             Log.d(TAG, "Notificação persistida no SharedPreferences com sucesso!");
 
+            // Notifica MainActivity caso o app esteja aberto em primeiro plano
+            try {
+                Intent broadcast = new Intent("com.homemoney.app.NOTIFICATION_RECEIVED");
+                broadcast.setPackage(getPackageName());
+                sendBroadcast(broadcast);
+            } catch (Exception ignored) {}
+
         } catch (Exception e) {
             Log.e(TAG, "Erro ao processar notificação bancária", e);
         }
     }
 }
+
