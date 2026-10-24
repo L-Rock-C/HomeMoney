@@ -543,6 +543,38 @@ export function requestAndroidNotificationPermission(): void {
   }
 }
 
+function createFallbackBankNotification(item: any, status: 'PENDING' | 'DISMISSED'): BankNotification {
+  const bank = (item.bank as BankNotification['bank']) || 'Nubank';
+  const bankRule = BANK_RULES.find((b) => b.bank === bank) || BANK_RULES[0];
+  const now = new Date();
+  const dateStr = item.date || now.toISOString().split('T')[0];
+  const timeStr = item.time || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const text = item.text || item.title || 'Notificação Bancária';
+  const title = item.title || '';
+
+  const numberMatch = text.match(/([0-9]+[.,][0-9]{2})/);
+  const amount = numberMatch ? parseBRLAmount(numberMatch[1]) : 0;
+  const formattedAmount = amount > 0
+    ? amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '0,00';
+
+  return {
+    id: item.id || `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    bank,
+    bankColor: bankRule.color,
+    type: /(?:recebeu|recebido|crédito)/i.test(text) ? 'INCOME' : 'EXPENSE',
+    amount,
+    formattedAmount,
+    targetOrSource: title || 'Transferência Bancária',
+    paymentMethod: /pix/i.test(text) ? 'Pix' : 'Transferência',
+    date: dateStr,
+    time: timeStr,
+    rawText: title ? `${title}: ${text}` : text,
+    status,
+    dismissedAt: status === 'DISMISSED' ? new Date().toISOString() : undefined,
+  };
+}
+
 // ============================================================================
 // Ouvinte do Evento Nativo do Android (Capacitor Bridge)
 // ============================================================================
@@ -557,7 +589,7 @@ if (typeof window !== 'undefined') {
           const title = item.title || '';
           const fullText = title ? `${title}: ${text}` : text;
 
-          const parsed =
+          let notif =
             parseBankNotificationText(
               text,
               item.bank as BankNotification['bank'],
@@ -577,11 +609,16 @@ if (typeof window !== 'undefined') {
               item.time
             );
 
-          if (parsed) {
-            addIncomingNotification(parsed);
+          if (!notif) {
+            notif = createFallbackBankNotification(item, 'PENDING');
           }
+
+          if (item.id) {
+            notif.id = item.id;
+          }
+
+          addIncomingNotification(notif);
         }
-        // Dispara evento para re-renderizar componentes visuais
         window.dispatchEvent(new Event('homemoney_queue_updated'));
       }
     } catch (err) {
@@ -594,37 +631,27 @@ if (typeof window !== 'undefined') {
       const raw = e.detail;
       const parsedArray = typeof raw === 'string' ? JSON.parse(raw) : raw;
       if (Array.isArray(parsedArray)) {
+        const current = getStoredNotifications();
         for (const item of parsedArray) {
           const text = item.text || '';
-          const title = item.title || '';
-          const fullText = title ? `${title}: ${text}` : text;
+          const notifId = item.id;
 
-          const parsed =
-            parseBankNotificationText(
-              text,
-              item.bank as BankNotification['bank'],
-              item.date,
-              item.time
-            ) ||
-            parseBankNotificationText(
-              fullText,
-              item.bank as BankNotification['bank'],
-              item.date,
-              item.time
-            );
+          // Se já existia na lista, marca como DISMISSED
+          const existing = current.find(
+            (n) => (notifId && n.id === notifId) || (text && n.rawText.includes(text))
+          );
 
-          if (parsed) {
-            const current = getStoredNotifications();
-            const exists = current.find(
-              (n) => n.rawText === parsed.rawText && n.date === parsed.date && Math.abs(n.amount - parsed.amount) < 0.01
-            );
-            if (exists) {
-              dismissNotification(exists.id);
-            } else {
-              parsed.status = 'DISMISSED';
-              parsed.dismissedAt = new Date().toISOString();
-              saveStoredNotifications([parsed, ...current]);
-            }
+          if (existing) {
+            dismissNotification(existing.id);
+          } else {
+            // Cria notificação dispensada para garantir que apareça no histórico
+            let dismissedNotif =
+              parseBankNotificationText(text, item.bank as BankNotification['bank'], item.date, item.time) ||
+              createFallbackBankNotification(item, 'DISMISSED');
+            dismissedNotif.status = 'DISMISSED';
+            dismissedNotif.dismissedAt = new Date().toISOString();
+            if (notifId) dismissedNotif.id = notifId;
+            saveStoredNotifications([dismissedNotif, ...getStoredNotifications()]);
           }
         }
         window.dispatchEvent(new Event('homemoney_queue_updated'));

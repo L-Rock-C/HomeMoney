@@ -60,6 +60,7 @@ import { ManagerModal } from '../components/ManagerModal';
 import { WalletModal } from '../components/WalletModal';
 import { ReconciliationQueueModal } from '../components/ReconciliationQueueModal';
 import { NotificationHistoryModal } from '../components/NotificationHistoryModal';
+import { NotificationHistoryView } from '../components/NotificationHistoryView';
 import { ProfileContactsView } from '../components/ProfileContactsView';
 import { CategoryDonutChart, MonthlyBarChart } from '../components/FinanceCharts';
 import {
@@ -91,7 +92,7 @@ export default function HomePage() {
 
   // App data states
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'TRANSACTIONS' | 'BALANCE' | 'PEOPLE' | 'WALLETS' | 'PROFILE'>('DASHBOARD');
+  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'TRANSACTIONS' | 'BALANCE' | 'PEOPLE' | 'WALLETS' | 'PROFILE' | 'SUGGESTIONS'>('DASHBOARD');
 
 
   // Date Filter states
@@ -649,12 +650,16 @@ export default function HomePage() {
           {/* Histórico de Sugestões Bancárias */}
           <button
             onClick={() => {
-              setIsHistoryModalOpen(true);
+              setActiveTab('SUGGESTIONS');
               setMobileMenuOpen(false);
             }}
             className={`w-full flex items-center ${
               sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-3'
-            } py-2.5 rounded-xl text-sm font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 relative`}
+            } py-2.5 rounded-xl text-sm font-medium transition ${
+              activeTab === 'SUGGESTIONS'
+                ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400 font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            } relative cursor-pointer`}
             title="Histórico de Sugestões Bancárias"
           >
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
@@ -789,12 +794,13 @@ export default function HomePage() {
                 {activeTab === 'PEOPLE' && 'Acertos com Terceiros'}
                 {activeTab === 'WALLETS' && 'Carteiras & Poupanças'}
                 {activeTab === 'PROFILE' && 'Meu Perfil & Conexões'}
+                {activeTab === 'SUGGESTIONS' && 'Histórico de Sugestões Bancárias'}
               </h2>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0 relative">
-            {activeTab !== 'PROFILE' && (
+            {activeTab !== 'PROFILE' && activeTab !== 'SUGGESTIONS' && (
               <>
                 {/* Botão de Checagem e Atualização de Notificações */}
                 <button
@@ -841,60 +847,69 @@ export default function HomePage() {
           {/* ========================================================================= */}
           {/* Dashboard Geral (Filtros & Indicadores KPI) - Apenas em Telas Financeiras */}
           {/* ========================================================================= */}
-          {activeTab !== 'PROFILE' && (
-            <>
-              {/* Smart Multi-Bank Notification Queue Banner - Apenas quando houver sugestões pendentes */}
-              {activeTab === 'DASHBOARD' && pendingQueue.length > 0 && (
-                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-violet-500/10 via-emerald-500/10 to-teal-500/10 border border-emerald-500/30 shadow-lg shadow-emerald-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300">
-                  <div className="flex items-start gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-violet-600/20 text-violet-400 border border-violet-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                      <BellRing className="w-5 h-5 animate-bounce text-violet-500 dark:text-violet-400" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
-                          {pendingQueue.length} {pendingQueue.length === 1 ? 'Transferência Detectada' : 'Transferências na Fila'}
-                        </span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                          Monitor de Bancos (BB, Caixa, Nubank, Bradesco, Santander, Inter)
-                        </span>
-                      </div>
-
-                      <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
-                        Você tem {pendingQueue.length}{' '}
-                        {pendingQueue.length === 1
-                          ? 'notificação bancária para conciliar'
-                          : 'notificações bancárias para conciliar'}
-                      </h4>
-                      <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                        {pendingQueue.slice(0, 4).map((item) => (
-                          <span
-                            key={item.id}
-                            className="text-[10px] font-semibold px-2 py-0.5 rounded-md text-white shadow-xs"
-                            style={{ backgroundColor: item.bankColor }}
-                          >
-                            {item.bank}: R$ {item.formattedAmount} ({item.targetOrSource})
-                          </span>
-                        ))}
-                        {pendingQueue.length > 4 && (
-                          <span className="text-[10px] text-slate-400">
-                            +{pendingQueue.length - 4} mais
-                          </span>
-                        )}
-                      </div>
-                    </div>
+          {/* Smart Multi-Bank Notification Queue Banner - Apenas no Dashboard quando houver sugestões pendentes */}
+          {activeTab === 'DASHBOARD' && pendingQueue.length > 0 && (
+            <div
+              onClick={() => setIsQueueModalOpen(true)}
+              className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-violet-500/10 via-emerald-500/10 to-teal-500/10 border border-emerald-500/30 shadow-lg shadow-emerald-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300 cursor-pointer hover:border-emerald-500/50 hover:scale-[1.005] transition"
+            >
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-violet-600/20 text-violet-400 border border-violet-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                  <BellRing className="w-5 h-5 animate-bounce text-violet-500 dark:text-violet-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                      {pendingQueue.length} {pendingQueue.length === 1 ? 'Transferência Detectada' : 'Transferências na Fila'}
+                    </span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      Monitor de Bancos (BB, Caixa, Nubank, Bradesco, Santander, Inter)
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 flex-wrap">
-                    <button
-                      onClick={() => setIsQueueModalOpen(true)}
-                      className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/25 transition flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      <Sparkles className="w-4 h-4" /> Resolver Fila ({pendingQueue.length})
-                    </button>
+                  <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
+                    Você tem {pendingQueue.length}{' '}
+                    {pendingQueue.length === 1
+                      ? 'notificação bancária para conciliar'
+                      : 'notificações bancárias para conciliar'}
+                  </h4>
+                  <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                    {pendingQueue.slice(0, 4).map((item) => (
+                      <span
+                        key={item.id}
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded-md text-white shadow-xs"
+                        style={{ backgroundColor: item.bankColor }}
+                      >
+                        {item.bank}: R$ {item.formattedAmount} ({item.targetOrSource})
+                      </span>
+                    ))}
+                    {pendingQueue.length > 4 && (
+                      <span className="text-[10px] text-slate-400">
+                        +{pendingQueue.length - 4} mais
+                      </span>
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 flex-wrap">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsQueueModalOpen(true);
+                  }}
+                  className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/25 transition flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <Sparkles className="w-4 h-4" /> Conciliar Fila ({pendingQueue.length})
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Filtros de Período e Indicadores KPI: Apenas em Telas de Análise Financeira (DASHBOARD, TRANSACTIONS, BALANCE) */}
+          {(activeTab === 'DASHBOARD' || activeTab === 'TRANSACTIONS' || activeTab === 'BALANCE') && (
+            <>
 
               {/* Styled Date Search & Filter Bar */}
               <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
@@ -1747,6 +1762,16 @@ export default function HomePage() {
               people={people}
               onRefreshData={loadInitialData}
               formatBRL={formatBRL}
+            />
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB 6: Histórico de Sugestões Bancárias */}
+          {/* ========================================================================= */}
+          {activeTab === 'SUGGESTIONS' && (
+            <NotificationHistoryView
+              onOpenReconciliation={() => setIsQueueModalOpen(true)}
+              onQueueUpdated={refreshQueueData}
             />
           )}
         </main>

@@ -29,6 +29,7 @@ public class BankNotificationListener extends NotificationListenerService {
     public static final String PREFS_NAME = "HomeMoneyNotifications";
     public static final String KEY_PENDING = "pending_notifications";
     public static final String KEY_DISMISSED = "dismissed_notifications";
+    public static final String KEY_NOTIFIED_HASHES = "notified_hashes";
     public static final String CHANNEL_ID = "homemoney_bank_suggestions";
 
     public static volatile BankNotificationListener instance;
@@ -49,13 +50,13 @@ public class BankNotificationListener extends NotificationListenerService {
         Log.d(TAG, "BankNotificationListener desconectado.");
     }
 
-    public void scanActiveNotifications() {
+    public void scanActiveNotifications(boolean postSystemNotification) {
         try {
             StatusBarNotification[] active = getActiveNotifications();
             if (active != null) {
-                Log.d(TAG, "Escaneando " + active.length + " notificações ativas na bandeja...");
+                Log.d(TAG, "Escaneando " + active.length + " notificações ativas na bandeja (notificar=" + postSystemNotification + ")...");
                 for (StatusBarNotification sbn : active) {
-                    onNotificationPosted(sbn);
+                    processNotification(sbn, postSystemNotification);
                 }
             }
         } catch (Exception e) {
@@ -63,8 +64,18 @@ public class BankNotificationListener extends NotificationListenerService {
         }
     }
 
+    public void scanActiveNotifications() {
+        // Ao clicar no botão de atualização dentro do app, NÃO dispara notificações pop-up no sistema
+        scanActiveNotifications(false);
+    }
+
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
+        // Quando uma notificação nova do banco chega do sistema, dispara notificação de sugestão nativa
+        processNotification(sbn, true);
+    }
+
+    private void processNotification(StatusBarNotification sbn, boolean postSystemNotification) {
         if (sbn == null || sbn.getNotification() == null) return;
 
         String packageName = sbn.getPackageName();
@@ -143,8 +154,7 @@ public class BankNotificationListener extends NotificationListenerService {
                 return; // Notificação de app não bancário ignorada
             }
 
-            // Log de diagnóstico no Logcat do Android Studio
-            Log.d(TAG, "Notificação bancária capturada [" + matchedBank + "]: " + title + " | " + text);
+            Log.d(TAG, "Notificação bancária identificada [" + matchedBank + "]: " + title + " | " + text);
 
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
             SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
@@ -160,12 +170,23 @@ public class BankNotificationListener extends NotificationListenerService {
             notifObj.put("time", timeFormat.format(now));
             notifObj.put("package", packageName);
 
-            // Armazena no SharedPreferences para o WebView do Capacitor consumir
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+
+            // Deduplicação persistente via hash para nunca notificar a mesma notificação repetidamente
+            String hash = String.valueOf((matchedBank + "|" + title + "|" + text).hashCode());
+            String notifiedJson = prefs.getString(KEY_NOTIFIED_HASHES, "[]");
+            JSONArray notifiedArray = new JSONArray(notifiedJson);
+            boolean alreadyNotified = false;
+            for (int i = 0; i < notifiedArray.length(); i++) {
+                if (hash.equals(notifiedArray.optString(i))) {
+                    alreadyNotified = true;
+                    break;
+                }
+            }
+
+            // Armazena no SharedPreferences se ainda não estiver na fila pendente
             String existingJson = prefs.getString(KEY_PENDING, "[]");
             JSONArray array = new JSONArray(existingJson);
-
-            // Evita duplicatas idênticas salvas no mesmo minuto
             boolean duplicate = false;
             for (int i = 0; i < array.length(); i++) {
                 JSONObject obj = array.getJSONObject(i);
@@ -180,15 +201,27 @@ public class BankNotificationListener extends NotificationListenerService {
                 prefs.edit().putString(KEY_PENDING, array.toString()).apply();
                 Log.d(TAG, "Notificação persistida no SharedPreferences com sucesso!");
 
-                // Lança notificação nativa sugerindo o registro imediato
-                postSuggestionNotification(matchedBank, title, text, notifId);
-
                 // Notifica MainActivity caso o app esteja aberto em primeiro plano
                 try {
                     Intent broadcast = new Intent("com.homemoney.app.NOTIFICATION_RECEIVED");
                     broadcast.setPackage(getPackageName());
                     sendBroadcast(broadcast);
                 } catch (Exception ignored) {}
+            }
+
+            // Dispara notificação nativa apenas se postSystemNotification for true e não tiver sido notificada antes
+            if (postSystemNotification && !alreadyNotified) {
+                notifiedArray.put(hash);
+                if (notifiedArray.length() > 200) {
+                    JSONArray trimmed = new JSONArray();
+                    for (int i = notifiedArray.length() - 100; i < notifiedArray.length(); i++) {
+                        trimmed.put(notifiedArray.get(i));
+                    }
+                    notifiedArray = trimmed;
+                }
+                prefs.edit().putString(KEY_NOTIFIED_HASHES, notifiedArray.toString()).apply();
+
+                postSuggestionNotification(matchedBank, title, text, notifId);
             }
 
         } catch (Exception e) {
@@ -227,7 +260,7 @@ public class BankNotificationListener extends NotificationListenerService {
 
             int notifIntId = Math.abs(notifId.hashCode());
 
-            // Ação 1: Registrar Agora (Abre o HomeMoney na fila/modal de conciliação)
+            // Ação 1: Conciliar (Abre o HomeMoney na fila/modal de conciliação)
             Intent openIntent = new Intent(this, MainActivity.class);
             openIntent.setAction("OPEN_RECONCILIATION");
             openIntent.putExtra("notification_id", notifId);
@@ -279,7 +312,7 @@ public class BankNotificationListener extends NotificationListenerService {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .addAction(new NotificationCompat.Action(
                     0,
-                    "✅ Registrar Agora",
+                    "✅ Conciliar",
                     openPendingIntent
                 ))
                 .addAction(new NotificationCompat.Action(
@@ -296,4 +329,3 @@ public class BankNotificationListener extends NotificationListenerService {
         }
     }
 }
-

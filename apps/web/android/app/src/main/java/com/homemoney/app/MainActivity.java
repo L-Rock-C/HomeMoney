@@ -168,11 +168,8 @@ public class MainActivity extends BridgeActivity {
                 WebView webView = getBridge().getWebView();
                 String idArg = pendingReconciliationId != null ? pendingReconciliationId : "";
                 String js = "window.dispatchEvent(new CustomEvent('homemoney_open_reconciliation', { detail: { id: '" + idArg + "' } }));";
-                webView.post(() -> {
-                    webView.evaluateJavascript(js, null);
-                    pendingOpenReconciliation = false;
-                    pendingReconciliationId = null;
-                });
+                webView.post(() -> webView.evaluateJavascript(js, null));
+                webView.postDelayed(() -> webView.evaluateJavascript(js, null), 400);
             }
         } catch (Exception ignored) {}
     }
@@ -254,7 +251,7 @@ public class MainActivity extends BridgeActivity {
                     } catch (Exception ignored) {}
                 }
                 if (BankNotificationListener.instance != null) {
-                    BankNotificationListener.instance.scanActiveNotifications();
+                    BankNotificationListener.instance.scanActiveNotifications(false);
                 }
                 if (context instanceof MainActivity) {
                     ((MainActivity) context).runOnUiThread(() -> {
