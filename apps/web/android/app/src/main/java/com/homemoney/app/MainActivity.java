@@ -34,6 +34,14 @@ public class MainActivity extends BridgeActivity {
     public void onResume() {
         super.onResume();
         setupNotificationBridge();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                ComponentName cn = new ComponentName(this, BankNotificationListener.class);
+                android.service.notification.NotificationListenerService.requestRebind(cn);
+            } catch (Exception ignored) {}
+        }
+
         syncPendingBankNotifications();
 
         try {
@@ -75,8 +83,11 @@ public class MainActivity extends BridgeActivity {
             if (!"[]".equals(pending) && !pending.isEmpty()) {
                 if (getBridge() != null && getBridge().getWebView() != null) {
                     WebView webView = getBridge().getWebView();
-                    String escapedJson = pending.replace("\\", "\\\\").replace("'", "\\'");
-                    String js = "window.dispatchEvent(new CustomEvent('homemoney_android_notifications', { detail: '" + escapedJson + "' }));";
+                    String base64 = android.util.Base64.encodeToString(
+                        pending.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        android.util.Base64.NO_WRAP
+                    );
+                    String js = "window.dispatchEvent(new CustomEvent('homemoney_android_notifications', { detail: decodeURIComponent(escape(atob('" + base64 + "'))) }));";
                     webView.post(() -> webView.evaluateJavascript(js, null));
 
                     // Limpa a fila pendente nativa para não duplicar no app
@@ -117,6 +128,12 @@ public class MainActivity extends BridgeActivity {
         @JavascriptInterface
         public void checkNotificationsNow() {
             try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    try {
+                        ComponentName cn = new ComponentName(context, BankNotificationListener.class);
+                        android.service.notification.NotificationListenerService.requestRebind(cn);
+                    } catch (Exception ignored) {}
+                }
                 if (BankNotificationListener.instance != null) {
                     BankNotificationListener.instance.scanActiveNotifications();
                 }

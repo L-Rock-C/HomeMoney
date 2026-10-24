@@ -347,6 +347,52 @@ export function parseBankNotificationText(
     }
   }
 
+  // ============================================================================
+  // Fallback Universal: Captura qualquer notificação bancária com valor em R$
+  // ============================================================================
+  const moneyMatch = text.match(/R\$\s*([0-9.,]+)/i);
+  if (moneyMatch) {
+    const amount = parseBRLAmount(moneyMatch[1]);
+    if (amount > 0) {
+      const isIncome = /(?:recebeu|recebida|recebido|crédito|depositado|reembolso|te\s+enviou)/i.test(text);
+      let targetOrSource = isIncome ? 'Transferência Recebida' : 'Transferência Enviada';
+
+      if (isIncome) {
+        const fromMatch = text.match(/(?:de|de\s+parte\s+de)\s+([A-Za-zÀ-ÿ\s0-9]{2,35})/i);
+        if (fromMatch) targetOrSource = cleanName(fromMatch[1]);
+      } else {
+        const toMatch = text.match(/(?:para|a|em|no|na)\s+([A-Za-zÀ-ÿ\s0-9]{2,35})/i);
+        if (toMatch) targetOrSource = cleanName(toMatch[1]);
+      }
+
+      const isPix = /pix/i.test(text);
+      const isCard = /(?:cartão|cartao|credito|crédito|debito|débito|compra)/i.test(text);
+      const paymentMethod = isPix ? 'Pix' : isCard ? 'Crédito' : 'Transferência';
+
+      const bank = explicitBank || 'Nubank';
+      const bankRule = BANK_RULES.find((b) => b.bank === bank) || BANK_RULES[0];
+      const formatted = amount.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+
+      return {
+        id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        bank: bankRule.bank,
+        bankColor: bankRule.color,
+        type: isIncome ? 'INCOME' : 'EXPENSE',
+        amount,
+        formattedAmount: formatted,
+        targetOrSource,
+        paymentMethod,
+        date: dateStr,
+        time: timeStr,
+        rawText: text,
+        status: 'PENDING',
+      };
+    }
+  }
+
   return null;
 }
 
@@ -419,6 +465,12 @@ export function clearDismissedHistory(): BankNotification[] {
 
 export function addIncomingNotification(notif: BankNotification): BankNotification[] {
   const current = getStoredNotifications();
+  // Evita adicionar duplicatas idênticas da mesma notificação
+  const exists = current.some(
+    (n) => n.rawText === notif.rawText && n.date === notif.date && Math.abs(n.amount - notif.amount) < 0.01
+  );
+  if (exists) return current;
+
   const updated = [notif, ...current];
   saveStoredNotifications(updated);
   return updated;
