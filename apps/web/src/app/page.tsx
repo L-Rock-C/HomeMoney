@@ -57,8 +57,15 @@ import { TransactionModal } from '../components/TransactionModal';
 import { SettleModal } from '../components/SettleModal';
 import { ManagerModal } from '../components/ManagerModal';
 import { WalletModal } from '../components/WalletModal';
+import { ReconciliationQueueModal } from '../components/ReconciliationQueueModal';
+import { NotificationHistoryModal } from '../components/NotificationHistoryModal';
 import { ProfileContactsView } from '../components/ProfileContactsView';
 import { CategoryDonutChart, MonthlyBarChart } from '../components/FinanceCharts';
+import {
+  BankNotification,
+  getPendingQueue,
+  getDismissedHistory,
+} from '../lib/bankNotificationService';
 
 const getCurrentMonthKey = () => {
   const now = new Date();
@@ -114,37 +121,21 @@ export default function HomePage() {
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [walletToEdit, setWalletToEdit] = useState<any | null>(null);
 
-  // Monitoramento / Notificação de Compras Detectadas (Conciliação Inteligente)
-  const [detectedTransaction, setDetectedTransaction] = useState<any | null>({
-    source: 'Nubank',
-    description: 'Pix para Allison Araújo',
-    amount: '80,00',
-    type: 'EXPENSE',
-    paymentMethod: 'Pix',
-    date: '2026-10-13',
-    rawTime: '14:23',
-    bank: 'Nubank',
-  });
+  // Fila de Conciliação e Histórico de Notificações Bancárias
+  const [pendingQueue, setPendingQueue] = useState<BankNotification[]>([]);
+  const [dismissedCount, setDismissedCount] = useState(0);
+  const [isQueueModalOpen, setIsQueueModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
-  const handleReconcileDetected = () => {
-    if (!detectedTransaction) return;
-    const nubankAcc = accounts.find((a) => a.name.toLowerCase().includes('nubank')) || accounts[0];
-    setTransactionToEdit({
-      id: undefined,
-      description: detectedTransaction.description,
-      amount: parseFloat(detectedTransaction.amount.replace(',', '.')),
-      type: detectedTransaction.type,
-      paymentMethod: detectedTransaction.paymentMethod,
-      purchaseDate: detectedTransaction.date,
-      dueDate: detectedTransaction.date,
-      accountId: nubankAcc?.id || (accounts[0]?.id || ''),
-      notes: `Lançamento capturado via Notificação ${detectedTransaction.bank} (${detectedTransaction.date} às ${detectedTransaction.rawTime})`,
-      paid: true,
-      totalInstallments: 1,
-    });
-    setDetectedTransaction(null);
-    setIsModalOpen(true);
+  const refreshQueueData = () => {
+    const queue = getPendingQueue();
+    setPendingQueue(queue);
+    setDismissedCount(getDismissedHistory().length);
   };
+
+  useEffect(() => {
+    refreshQueueData();
+  }, []);
 
   // Initialize theme and authenticate user
   useEffect(() => {
@@ -744,45 +735,89 @@ export default function HomePage() {
           {/* ========================================================================= */}
           {activeTab !== 'PROFILE' && (
             <>
-              {/* Smart Purchase Detection & Reconcile Banner */}
-              {activeTab === 'DASHBOARD' && detectedTransaction && (
+              {/* Smart Multi-Bank Notification Queue Banner */}
+              {activeTab === 'DASHBOARD' && (
                 <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-violet-500/10 via-emerald-500/10 to-teal-500/10 border border-emerald-500/30 shadow-lg shadow-emerald-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300">
                   <div className="flex items-start gap-3.5">
                     <div className="w-10 h-10 rounded-xl bg-violet-600/20 text-violet-400 border border-violet-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                      <BellRing className="w-5 h-5 animate-pulse text-violet-500 dark:text-violet-400" />
+                      <BellRing
+                        className={`w-5 h-5 ${
+                          pendingQueue.length > 0
+                            ? 'animate-bounce text-violet-500 dark:text-violet-400'
+                            : 'text-slate-400'
+                        }`}
+                      />
                     </div>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-600 dark:text-violet-300 border border-violet-500/30">
-                          Notificação {detectedTransaction.bank} Detectada
-                        </span>
+                        {pendingQueue.length > 0 ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/30">
+                            {pendingQueue.length} {pendingQueue.length === 1 ? 'Transferência Detectada' : 'Transferências na Fila'}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                            Fila Limpa
+                          </span>
+                        )}
                         <span className="text-xs text-slate-500 dark:text-slate-400">
-                          {detectedTransaction.date} às {detectedTransaction.rawTime}
+                          Monitor de Bancos (BB, Caixa, Nubank, Bradesco, Santander, Inter)
                         </span>
                       </div>
-                      <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
-                        {detectedTransaction.description} •{' '}
-                        <span className="text-rose-500 font-extrabold">R$ {detectedTransaction.amount}</span>
-                      </h4>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                        Transferência capturada em segundo plano. Deseja classificar a categoria e confirmar de onde saiu esse valor?
-                      </p>
+
+                      {pendingQueue.length > 0 ? (
+                        <>
+                          <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
+                            Você tem {pendingQueue.length}{' '}
+                            {pendingQueue.length === 1
+                              ? 'notificação bancária para conciliar'
+                              : 'notificações bancárias para conciliar'}
+                          </h4>
+                          <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                            {pendingQueue.slice(0, 4).map((item) => (
+                              <span
+                                key={item.id}
+                                className="text-[10px] font-semibold px-2 py-0.5 rounded-md text-white shadow-xs"
+                                style={{ backgroundColor: item.bankColor }}
+                              >
+                                {item.bank}: R$ {item.formattedAmount} ({item.targetOrSource})
+                              </span>
+                            ))}
+                            {pendingQueue.length > 4 && (
+                              <span className="text-[10px] text-slate-400">
+                                +{pendingQueue.length - 4} mais
+                              </span>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
+                            Nenhuma transferência pendente no momento
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            As notificações dos seus bancos instalados serão capturadas automaticamente em segundo plano.
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 flex-wrap">
                     <button
-                      onClick={() => setDetectedTransaction(null)}
-                      className="px-3 py-2 text-xs font-semibold rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                      onClick={() => setIsHistoryModalOpen(true)}
+                      className="px-3 py-2 text-xs font-semibold rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800 transition cursor-pointer flex items-center gap-1.5"
                     >
-                      Dispensar
+                      Histórico {dismissedCount > 0 ? `(${dismissedCount} dispensadas)` : ''}
                     </button>
-                    <button
-                      onClick={handleReconcileDetected}
-                      className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/25 transition flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Sparkles className="w-4 h-4" /> Conciliar Agora
-                    </button>
+
+                    {pendingQueue.length > 0 && (
+                      <button
+                        onClick={() => setIsQueueModalOpen(true)}
+                        className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/25 transition flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Sparkles className="w-4 h-4" /> Resolver Fila ({pendingQueue.length})
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -1691,6 +1726,24 @@ export default function HomePage() {
         }}
         onSuccess={loadInitialData}
         walletToEdit={walletToEdit}
+      />
+
+      <ReconciliationQueueModal
+        isOpen={isQueueModalOpen}
+        onClose={() => setIsQueueModalOpen(false)}
+        queue={pendingQueue}
+        accounts={accounts}
+        categories={categories}
+        people={people}
+        paymentMethods={paymentMethods}
+        onQueueUpdated={refreshQueueData}
+        onSuccessTransaction={loadInitialData}
+      />
+
+      <NotificationHistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        onQueueUpdated={refreshQueueData}
       />
     </div>
   );
