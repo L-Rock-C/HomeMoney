@@ -67,63 +67,225 @@ body {
 }
 
 /* ========================================================================= */
-/* Windows 7 / Frutiger Aero Theme (Vidro Aero Glass & Cores Vivas)          */
+/* Windows 7 / Frutiger Aero Theme (Fidelidade ao Windows 7 Original)        */
 /* ========================================================================= */
 .theme-aero {
-  --background: #dff6ff;
-  --foreground: #0c2340;
+  --background: #0f549e;
+  --foreground: #1a2b42;
   color-scheme: light;
 }
 
+/* 1. Classic Windows 7 "Harmony" Desktop Wallpaper */
 .theme-aero body {
-  background: linear-gradient(135deg, #62cdff 0%, #a0e9ff 25%, #caffbf 60%, #70e000 100%) fixed !important;
-  background-size: cover !important;
-  color: #0b2545 !important;
+  background: #0d3870 radial-gradient(ellipse 95% 85% at 50% 60%, #2976c7 0%, #17549c 40%, #0d3870 70%, #051a3a 100%) fixed !important;
+  background-attachment: fixed !important;
+  color: #1a2b42 !important;
+  font-family: 'Segoe UI', Tahoma, system-ui, -apple-system, sans-serif !important;
+  position: relative;
+  min-height: 100vh;
 }
 
-/* Aero Glass Panels with Specular Reflection */
-.theme-aero aside,
-.theme-aero header,
-.theme-aero .bg-white,
-.theme-aero .dark\:bg-slate-900,
-.theme-aero .bg-slate-50,
-.theme-aero .dark\:bg-slate-950,
-.theme-aero [role="dialog"] > div {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(240, 249, 255, 0.78) 50%, rgba(220, 245, 255, 0.84) 100%) !important;
-  backdrop-filter: blur(16px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(16px) saturate(190%) !important;
+/* Aurora & Light Beams across the Desktop (Windows 7 Center Glow) */
+.theme-aero body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: 
+    radial-gradient(ellipse 650px 380px at 50% 55%, rgba(145, 215, 255, 0.32) 0%, transparent 70%),
+    radial-gradient(circle 280px at 48% 50%, rgba(255, 255, 255, 0.25) 0%, transparent 60%),
+    radial-gradient(ellipse 480px 180px at 53% 58%, rgba(255, 195, 80, 0.16) 0%, transparent 65%),
+    radial-gradient(ellipse 520px 220px at 46% 62%, rgba(135, 225, 95, 0.15) 0%, transparent 65%);
+  z-index: 0;
+}
+
+/* 2. Windows 7 Superbar (Sidebar in HomeMoney) */
+.theme-aero aside {
+  background: linear-gradient(180deg, rgba(25, 60, 105, 0.88) 0%, rgba(14, 40, 75, 0.94) 50%, rgba(8, 25, 52, 0.96) 100%) !important;
+  backdrop-filter: blur(25px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(25px) saturate(200%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.28) !important;
+  box-shadow: 4px 0 30px rgba(0, 12, 32, 0.5), inset -1px 0 0 rgba(255, 255, 255, 0.12) !important;
+  z-index: 40;
+}
+
+/* Windows 7 Start Orb Badge */
+.theme-aero aside .w-8.h-8.bg-emerald-500,
+.theme-aero aside .w-10.h-10.bg-emerald-500 {
+  background: radial-gradient(circle at 35% 30%, #52c7ff 0%, #008be3 55%, #004b99 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.9), 0 0 12px rgba(60, 175, 255, 0.7) !important;
+  color: #ffffff !important;
+}
+
+/* Superbar Navigation Buttons */
+.theme-aero aside nav button {
+  color: #d8ecff !important;
+  border-radius: 4px !important;
+  border: 1px solid transparent !important;
+  transition: all 0.15s ease !important;
+  text-shadow: 0 1px 2px rgba(0, 15, 35, 0.8) !important;
+}
+
+.theme-aero aside nav button:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(150, 210, 255, 0.18) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 0 10px rgba(100, 190, 255, 0.4) !important;
+  color: #ffffff !important;
+}
+
+.theme-aero aside nav button.bg-emerald-500,
+.theme-aero aside nav button[class*="text-slate-950"],
+.theme-aero aside nav button[class*="bg-emerald"] {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(145, 210, 255, 0.38) 49%, rgba(75, 170, 245, 0.5) 50%, rgba(105, 190, 255, 0.5) 100%) !important;
   border: 1px solid rgba(255, 255, 255, 0.85) !important;
-  box-shadow: 0 10px 30px rgba(0, 119, 182, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(0, 180, 216, 0.2) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 0 14px rgba(80, 185, 255, 0.65) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 20, 50, 0.9) !important;
 }
 
-/* Windows 7 Aero Glossy Buttons */
+/* 3. Windows 7 Aero Glass Windows (Main Panels & Dialogs) */
+.theme-aero header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(200, 230, 255, 0.58) 50%, rgba(160, 210, 250, 0.52) 100%) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(130, 185, 235, 0.75) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 3px 15px rgba(0, 25, 60, 0.25) !important;
+}
+
+.theme-aero header h2 {
+  color: #0d2745 !important;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 1), 0 0 4px rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Windows 7 Aero Frame for Content Cards and Modals */
+.theme-aero main > div,
+.theme-aero .p-5.rounded-2xl,
+.theme-aero .p-6.rounded-2xl,
+.theme-aero .p-4.rounded-2xl,
+.theme-aero [role="dialog"] > div,
+.theme-aero .fixed.inset-0 > div {
+  background: linear-gradient(180deg, rgba(235, 246, 255, 0.75) 0%, rgba(185, 222, 252, 0.60) 36px, rgba(145, 196, 242, 0.54) 100%) !important;
+  backdrop-filter: blur(22px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.85) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 12px 35px rgba(0, 18, 48, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(100, 180, 240, 0.4) !important;
+}
+
+/* Inner Window Content (Crisp, High-Contrast White Background like Explorer & Control Panel) */
+.theme-aero table,
+.theme-aero .table-container,
+.theme-aero .bg-white,
+.theme-aero .dark\:bg-slate-900\/40,
+.theme-aero .dark\:bg-slate-900,
+.theme-aero .dark\:bg-slate-950,
+.theme-aero [role="dialog"] form,
+.theme-aero .fixed.inset-0 form {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-color: #c5d7e8 !important;
+}
+
+/* 4. Windows 7 Aero Pushbuttons */
 .theme-aero button.bg-emerald-500,
 .theme-aero .btn-aero-primary {
-  background: linear-gradient(to bottom, #72efdd 0%, #48cae4 48%, #0096c7 52%, #0077b6 100%) !important;
+  background: linear-gradient(180deg, #fbfdfe 0%, #e3f3fc 49%, #c4e6fa 50%, #a2d7f7 100%) !important;
+  color: #0b2746 !important;
+  border: 1px solid #3c7fb1 !important;
+  border-radius: 3px !important;
+  box-shadow: inset 0 1px 0 #ffffff, inset 0 0 2px rgba(255, 255, 255, 0.8), 0 1px 3px rgba(0, 20, 50, 0.2) !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+  font-weight: 600 !important;
+}
+
+.theme-aero button.bg-emerald-500:hover,
+.theme-aero .btn-aero-primary:hover {
+  background: linear-gradient(180deg, #ebf6fd 0%, #c4e7fb 49%, #9fd5f6 50%, #7ec7f2 100%) !important;
+  border-color: #276899 !important;
+  box-shadow: inset 0 1px 0 #ffffff, 0 0 8px rgba(60, 127, 177, 0.75) !important;
+  color: #071f38 !important;
+}
+
+.theme-aero button.bg-emerald-500:active,
+.theme-aero .btn-aero-primary:active {
+  background: linear-gradient(180deg, #99d2f5 0%, #7cc5f1 49%, #5cb4ee 50%, #46a7e9 100%) !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Secondary Button (Windows 7 Silver) */
+.theme-aero button.border-slate-200,
+.theme-aero button.bg-slate-100 {
+  background: linear-gradient(180deg, #fdfdfd 0%, #f0f0f0 49%, #e3e3e3 50%, #dcdcdc 100%) !important;
+  color: #202020 !important;
+  border: 1px solid #8e8f8f !important;
+  border-radius: 3px !important;
+  box-shadow: inset 0 1px 0 #ffffff, 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+.theme-aero button.border-slate-200:hover,
+.theme-aero button.bg-slate-100:hover {
+  background: linear-gradient(180deg, #f7fafd 0%, #e5f2fa 49%, #d2eaf7 50%, #c0e1f4 100%) !important;
+  border-color: #3c7fb1 !important;
+  box-shadow: inset 0 1px 0 #ffffff, 0 0 6px rgba(60, 127, 177, 0.6) !important;
+}
+
+/* 5. Windows 7 Red Close Button */
+.theme-aero button:has(svg.lucide-x) {
+  background: linear-gradient(180deg, #f27575 0%, #e03535 49%, #c41818 50%, #9e0e0e 100%) !important;
   color: #ffffff !important;
-  text-shadow: 0 1px 2px rgba(0, 20, 50, 0.6) !important;
-  border: 1px solid rgba(255, 255, 255, 0.6) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 3px 8px rgba(0, 119, 182, 0.35) !important;
+  border: 1px solid #7d0e0e !important;
+  border-radius: 3px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 }
 
-.theme-aero button.bg-emerald-500:hover {
-  background: linear-gradient(to bottom, #90e0ef 0%, #48cae4 48%, #023e8a 52%, #0096c7 100%) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 0 14px rgba(72, 202, 228, 0.7) !important;
+.theme-aero button:has(svg.lucide-x):hover {
+  background: linear-gradient(180deg, #ff8a8a 0%, #f04848 49%, #d62222 50%, #b81414 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 0 10px rgba(220, 50, 50, 0.8) !important;
 }
 
-/* Windows 7 Window Titlebar Glow Effect */
-.theme-aero header {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(200, 235, 255, 0.82) 100%) !important;
-  box-shadow: 0 4px 20px rgba(0, 150, 214, 0.18), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+/* 6. Form Inputs & Selects */
+.theme-aero input,
+.theme-aero select,
+.theme-aero textarea {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid #7f9db9 !important;
+  border-radius: 2px !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* Tables in Aero */
+.theme-aero input:focus,
+.theme-aero select:focus,
+.theme-aero textarea:focus {
+  border-color: #3d95d3 !important;
+  box-shadow: 0 0 6px rgba(61, 149, 211, 0.65), inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  outline: none !important;
+}
+
+/* 7. Tables (Windows Explorer Detail List) */
 .theme-aero table thead {
-  background: linear-gradient(180deg, rgba(230, 245, 255, 0.92) 0%, rgba(200, 235, 255, 0.8) 100%) !important;
-  border-bottom: 1px solid rgba(0, 180, 216, 0.3) !important;
+  background: linear-gradient(180deg, #f9fbfd 0%, #eaf2f9 50%, #d8e6f3 100%) !important;
+  border-bottom: 1px solid #a2bccc !important;
 }
 
-.theme-aero tr:hover {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(210, 240, 255, 0.5) 100%) !important;
+.theme-aero table thead th {
+  border-right: 1px solid #d0dfed !important;
+  font-weight: 600 !important;
+  color: #1a3654 !important;
+}
+
+.theme-aero table tbody tr {
+  background: #ffffff !important;
+}
+
+.theme-aero table tbody tr:nth-child(even) {
+  background: #f7fafc !important;
+}
+
+.theme-aero table tbody tr:hover {
+  background: linear-gradient(180deg, #f4f9fd 0%, #e3effa 100%) !important;
+  outline: 1px solid #a8d5f2 !important;
 }
 

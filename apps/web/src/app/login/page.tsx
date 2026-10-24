@@ -146,11 +146,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-2xl shadow-slate-200/50 dark:shadow-black/50 overflow-hidden z-10 backdrop-blur-xl">
         {/* Header */}
         <div className="p-8 pb-6 text-center border-b border-slate-100 dark:border-slate-800/60 bg-gradient-to-b from-slate-50/50 to-transparent dark:from-slate-900/50">
-          <div className="mx-auto w-16 h-16 rounded-2xl bg-[#688746]/10 border border-[#688746]/20 flex items-center justify-center shadow-lg shadow-[#688746]/15 mb-4 transform hover:scale-105 transition-transform">
-            <HomeMoneyLogo size="lg" showText={false} />
-          </div>
-
-          <div className="flex justify-center mb-1">
+          <div className="flex justify-center mb-2 transform hover:scale-105 transition-transform">
             <HomeMoneyLogo size="xl" showText={true} />
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 max-w-xs mx-auto">

@@ -762,33 +762,56 @@ export function ManagerView({
               )}
 
               <div>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-b from-sky-400 to-blue-600 flex items-center justify-center text-white mb-4 shadow-md border border-sky-300/60">
-                  <Sparkles className="w-6 h-6 animate-pulse" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-b from-[#2a7acc] to-[#0d3870] flex items-center justify-center text-white mb-4 shadow-md border border-sky-300/60">
+                  <Sparkles className="w-6 h-6 text-sky-200 animate-pulse" />
                 </div>
                 <div className="flex items-center gap-2">
                   <h4 className="text-base font-bold text-slate-900 dark:text-white">Windows 7 (Frutiger Aero)</h4>
                   <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-400/30">
-                    NOVO
+                    AERO
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                  Visual clássico Aero Glass com transparências translúcidas, reflexos de vidro líquido e gradientes vibrantes céu & grama.
+                  Estética fiel ao Windows 7: desktop azul royal Harmony com auroras, molduras Aero Glass em vidro ciano translúcido e janelas brancas nítidas.
                 </p>
 
-                {/* Visual Preview */}
-                <div className="mt-4 p-3 rounded-xl bg-gradient-to-b from-sky-200/80 to-blue-300/80 border border-white/60 shadow-inner space-y-2 backdrop-blur-sm">
-                  {/* Aero Window Titlebar simulation */}
-                  <div className="flex items-center justify-between pb-1 border-b border-sky-400/40">
-                    <span className="text-[10px] font-bold text-slate-800 drop-shadow-xs">HomeMoney Aero</span>
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 rounded-full bg-slate-400/60"></span>
-                      <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                      <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                {/* Visual Preview: Miniature Windows 7 Desktop with Aero Window & Taskbar */}
+                <div className="mt-4 p-3 rounded-xl bg-gradient-to-b from-[#1b5fa8] via-[#104380] to-[#082650] border border-sky-300/40 shadow-inner space-y-2 relative overflow-hidden">
+                  {/* Subtle Aurora light glow */}
+                  <div className="absolute inset-0 bg-radial from-sky-400/20 via-transparent to-transparent pointer-events-none"></div>
+
+                  {/* Miniature Aero Glass Window */}
+                  <div className="rounded-lg border border-white/80 bg-sky-200/50 backdrop-blur-md shadow-lg p-1 space-y-1 relative z-10">
+                    {/* Window Titlebar */}
+                    <div className="flex items-center justify-between px-1.5 py-0.5 border-b border-sky-300/60">
+                      <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-sky-400 border border-white"></span>
+                        <span className="text-[9px] font-bold text-slate-900 drop-shadow-xs">Painel de Controle</span>
+                      </div>
+                      <div className="flex items-center gap-0.5">
+                        <span className="w-2.5 h-1.5 rounded-2xs bg-white/60"></span>
+                        <span className="w-2.5 h-1.5 rounded-2xs bg-white/60"></span>
+                        <span className="w-3 h-1.5 rounded-2xs bg-red-600 text-[6px] text-white flex items-center justify-center font-bold">✕</span>
+                      </div>
+                    </div>
+                    {/* Window Content Body (White like reference image) */}
+                    <div className="bg-white rounded-xs p-1.5 shadow-2xs space-y-1">
+                      <div className="h-1.5 w-1/2 bg-sky-100 rounded-xs"></div>
+                      <div className="flex gap-1.5">
+                        <div className="h-4 w-1/3 bg-slate-50 border border-slate-200 rounded-xs"></div>
+                        <div className="h-4 w-1/3 bg-slate-50 border border-slate-200 rounded-xs"></div>
+                        <div className="h-4 w-1/3 bg-slate-50 border border-slate-200 rounded-xs"></div>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <div className="h-6 w-1/2 bg-white/70 rounded-md border border-white/90 shadow-xs"></div>
-                    <div className="h-6 w-1/2 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-md border border-emerald-300 shadow-xs"></div>
+
+                  {/* Miniature Windows 7 Taskbar */}
+                  <div className="h-4 rounded-md bg-gradient-to-b from-[#1c4d85]/90 to-[#0c2a52]/95 border border-white/30 backdrop-blur-sm flex items-center justify-between px-1.5 z-10 relative">
+                    <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-sky-500 to-cyan-300 border border-white shadow-xs"></div>
+                    <div className="flex gap-1">
+                      <div className="w-3 h-2 rounded-2xs bg-white/30"></div>
+                      <div className="w-3 h-2 rounded-2xs bg-sky-400/60"></div>
+                    </div>
                   </div>
                 </div>
               </div>
