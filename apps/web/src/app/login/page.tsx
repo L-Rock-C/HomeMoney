@@ -74,13 +74,6 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  const handleQuickFillLucas = () => {
-    setMode('LOGIN');
-    setIdentifier('lucas@homemoney.com');
-    setPassword('lucas123');
-    setErrorMsg('');
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -218,7 +211,7 @@ export default function LoginPage() {
                     type="text"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="lucas@homemoney.com ou Lucas"
+                    placeholder="seuemail@exemplo.com ou seu usuário"
                     required
                     className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
                   />
@@ -238,7 +231,7 @@ export default function LoginPage() {
                       type="text"
                       value={signupName}
                       onChange={(e) => setSignupName(e.target.value)}
-                      placeholder="Ex: Lelê, Matheus..."
+                      placeholder="Seu nome completo"
                       required
                       className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
                     />
@@ -309,27 +302,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* Quick Fill Lucas demo box */}
-          {mode === 'LOGIN' && (
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={handleQuickFillLucas}
-                className="w-full p-2.5 rounded-xl border border-dashed border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100/50 dark:hover:bg-emerald-950/40 transition flex items-center justify-between text-xs"
-              >
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-emerald-500" />
-                  <span className="font-medium text-left">
-                    Entrar com conta padrão (Lucas)
-                  </span>
-                </div>
-                <span className="text-[10px] font-mono font-semibold bg-emerald-200/60 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded">
-                  Preencher
-                </span>
-              </button>
-            </div>
-          )}
 
           {/* Footer Security Badges */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-center gap-4 text-[11px] text-slate-400">

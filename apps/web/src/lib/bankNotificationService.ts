@@ -360,10 +360,7 @@ export function getStoredNotifications(): BankNotification[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      // Carrega exemplos iniciais com o caso do usuário (Allison Araújo / Nubank) + BB + Inter para testar fila!
-      const initial = getInitialMockNotifications();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-      return initial;
+      return [];
     }
     return JSON.parse(raw);
   } catch {
@@ -425,69 +422,6 @@ export function addIncomingNotification(notif: BankNotification): BankNotificati
   const updated = [notif, ...current];
   saveStoredNotifications(updated);
   return updated;
-}
-
-// Exemplos iniciais realistas nos 6 bancos para testar a fila de conciliação
-export function getInitialMockNotifications(): BankNotification[] {
-  return [
-    {
-      id: 'notif_init_1',
-      bank: 'Nubank',
-      bankColor: '#820AD1',
-      type: 'EXPENSE',
-      amount: 80.0,
-      formattedAmount: '80,00',
-      targetOrSource: 'Allison Araújo',
-      paymentMethod: 'Pix',
-      date: '2026-10-13',
-      time: '14:23',
-      rawText: 'Você transferiu R$ 80,00 para Allison Araújo no Pix.',
-      status: 'PENDING',
-    },
-    {
-      id: 'notif_init_2',
-      bank: 'BB',
-      bankColor: '#FBF800',
-      type: 'EXPENSE',
-      amount: 54.9,
-      formattedAmount: '54,90',
-      targetOrSource: 'Padaria São José',
-      paymentMethod: 'Crédito',
-      date: '2026-10-13',
-      time: '18:10',
-      rawText: 'BB: Compra com Ourocard aprovada R$ 54,90 em Padaria São José.',
-      status: 'PENDING',
-    },
-    {
-      id: 'notif_init_3',
-      bank: 'Inter',
-      bankColor: '#FF7A00',
-      type: 'INCOME',
-      amount: 180.0,
-      formattedAmount: '180,00',
-      targetOrSource: 'Paula Oliveira',
-      paymentMethod: 'Pix',
-      date: '2026-10-14',
-      time: '09:45',
-      rawText: 'Inter: Você recebeu um Pix de R$ 180,00 de Paula Oliveira.',
-      status: 'PENDING',
-    },
-    {
-      id: 'notif_init_4_dismissed',
-      bank: 'Caixa',
-      bankColor: '#005CA9',
-      type: 'EXPENSE',
-      amount: 25.0,
-      formattedAmount: '25,00',
-      targetOrSource: 'Farmácia Popular',
-      paymentMethod: 'Débito',
-      date: '2026-10-10',
-      time: '11:00',
-      rawText: 'CAIXA: Compra aprovada de R$ 25,00 no cartao em Farmácia Popular.',
-      status: 'DISMISSED',
-      dismissedAt: '2026-10-10T14:00:00.000Z',
-    },
-  ];
 }
 
 // ============================================================================
