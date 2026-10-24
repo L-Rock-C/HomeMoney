@@ -51,8 +51,26 @@ export function ReconciliationQueueModal({
   onSuccessTransaction,
 }: ReconciliationQueueModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [totalInSession, setTotalInSession] = useState(queue.length);
+  const [resolvedInSession, setResolvedInSession] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Inicializa sessão de conciliação
+  useEffect(() => {
+    if (isOpen) {
+      setTotalInSession(queue.length);
+      setResolvedInSession(0);
+      setCurrentIndex(0);
+    }
+  }, [isOpen]);
+
+  // Garante que currentIndex esteja dentro dos limites da fila
+  useEffect(() => {
+    if (queue.length > 0 && currentIndex >= queue.length) {
+      setCurrentIndex(Math.max(0, queue.length - 1));
+    }
+  }, [queue.length, currentIndex]);
 
   // Current item form states
   const currentItem: BankNotification | undefined = queue[currentIndex];
@@ -115,14 +133,15 @@ export function ReconciliationQueueModal({
   if (!isOpen) return null;
 
   // Se a fila estiver vazia ou terminada
-  const isCompleted = queue.length === 0 || currentIndex >= queue.length;
+  const isCompleted = queue.length === 0;
 
   const handleDismissCurrent = () => {
     if (!currentItem) return;
     dismissNotification(currentItem.id);
+    setResolvedInSession((prev) => prev + 1);
     onQueueUpdated();
     if (currentIndex >= queue.length - 1) {
-      setCurrentIndex(queue.length - 1);
+      setCurrentIndex(Math.max(0, queue.length - 2));
     }
   };
 
@@ -161,12 +180,13 @@ export function ReconciliationQueueModal({
 
       // Marca notificação como conciliada
       markNotificationReconciled(currentItem.id);
+      setResolvedInSession((prev) => prev + 1);
       onQueueUpdated();
       onSuccessTransaction();
 
-      // Se há mais itens na fila, avança para o próximo
-      if (currentIndex < queue.length - 1) {
-        setCurrentIndex(currentIndex + 1);
+      // Ajusta o índice para apontar para o próximo item
+      if (currentIndex >= queue.length - 1) {
+        setCurrentIndex(Math.max(0, queue.length - 2));
       }
     } catch (err: any) {
       setError(err.message || 'Erro ao registrar transação.');
@@ -191,26 +211,51 @@ export function ReconciliationQueueModal({
                 </h2>
                 {!isCompleted && (
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Resolvendo <span className="font-bold text-emerald-600 dark:text-emerald-400">{currentIndex + 1}</span> de <span className="font-bold">{queue.length}</span> transferências pendentes
+                    Item <span className="font-bold text-emerald-600 dark:text-emerald-400">{Math.min(resolvedInSession + 1, totalInSession || queue.length)}</span> de <span className="font-bold">{totalInSession || queue.length}</span> ({queue.length} restantes na fila)
                   </p>
                 )}
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              {queue.length > 1 && (
+                <div className="hidden sm:flex items-center gap-1 text-[11px] font-semibold text-slate-500">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentIndex((prev) => (prev > 0 ? prev - 1 : queue.length - 1))}
+                    className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                    title="Ver anterior"
+                  >
+                    ←
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentIndex((prev) => (prev < queue.length - 1 ? prev + 1 : 0))}
+                    className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                    title="Pular para a próxima sem dispensar"
+                  >
+                    →
+                  </button>
+                </div>
+              )}
+
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Barra de progresso visual */}
-          {!isCompleted && queue.length > 0 && (
+          {!isCompleted && totalInSession > 0 && (
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
               <div
                 className="bg-emerald-500 h-full transition-all duration-300 rounded-full"
-                style={{ width: `${((currentIndex + 1) / queue.length) * 100}%` }}
+                style={{
+                  width: `${Math.min(100, Math.max(10, ((resolvedInSession + 1) / (totalInSession || queue.length)) * 100))}%`,
+                }}
               />
             </div>
           )}

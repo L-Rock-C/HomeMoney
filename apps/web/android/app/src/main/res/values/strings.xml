@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">HomeMoney</string>
+    <string name="title_activity_main">HomeMoney</string>
+    <string name="package_name">com.homemoney.app</string>
+    <string name="custom_url_scheme">com.homemoney.app</string>
+</resources>

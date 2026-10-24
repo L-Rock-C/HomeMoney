@@ -474,3 +474,32 @@ export function getInitialMockNotifications(): BankNotification[] {
     },
   ];
 }
+
+// ============================================================================
+// Ouvinte do Evento Nativo do Android (Capacitor Bridge)
+// ============================================================================
+if (typeof window !== 'undefined') {
+  window.addEventListener('homemoney_android_notifications', (e: any) => {
+    try {
+      const raw = e.detail;
+      const parsedArray = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (Array.isArray(parsedArray)) {
+        for (const item of parsedArray) {
+          const parsed = parseBankNotificationText(
+            item.text,
+            item.bank as BankNotification['bank'],
+            item.date,
+            item.time
+          );
+          if (parsed) {
+            addIncomingNotification(parsed);
+          }
+        }
+        // Dispara evento para re-renderizar componentes visuais
+        window.dispatchEvent(new Event('homemoney_queue_updated'));
+      }
+    } catch (err) {
+      console.error('Erro ao processar notificações do Android:', err);
+    }
+  });
+}
