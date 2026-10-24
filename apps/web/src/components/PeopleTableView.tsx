@@ -37,7 +37,7 @@ export function PeopleTableView({
   onCreateContact,
 }: PeopleTableViewProps) {
   const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState<'ALL' | 'PENDING' | 'LINKED'>('ALL');
+  const [filterType, setFilterType] = useState<'ALL' | 'PENDING' | 'LINKED'>('PENDING');
 
   // Calculations
   const totalToReceive = people.reduce((sum, p) => sum + (p.toReceive || 0), 0);

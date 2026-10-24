@@ -17,6 +17,13 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'HomeMoney - Gestão Financeira Inteligente',
   description: 'Controle de finanças pessoais, balanço mensal e acerto de contas com terceiros.',
+  icons: {
+    icon: [
+      { url: '/logo.svg', type: 'image/svg+xml' },
+      { url: '/logo.png', type: 'image/png' },
+    ],
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

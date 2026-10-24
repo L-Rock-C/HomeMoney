@@ -74,6 +74,7 @@ import { TransferRecognitionModal } from '../components/TransferRecognitionModal
 import { DevSimulatorView } from '../components/DevSimulatorView';
 import { TransactionDetailModal } from '../components/TransactionDetailModal';
 import { PeopleTableView } from '../components/PeopleTableView';
+import { HomeMoneyLogo } from '../components/HomeMoneyLogo';
 import { CategoryDonutChart, MonthlyBarChart } from '../components/FinanceCharts';
 import { SelectDropdown } from '../components/ui/FormControls';
 import {
@@ -642,18 +643,16 @@ export default function HomePage() {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 select-none animate-in fade-in duration-200">
         <div className="relative flex flex-col items-center max-w-sm w-full text-center space-y-6">
-          {/* Logo animado com glow esmeralda */}
+          {/* Logo oficial animado */}
           <div className="relative">
-            <div className="absolute -inset-4 bg-emerald-500/20 rounded-full blur-xl animate-pulse" />
-            <div className="relative w-20 h-20 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl flex items-center justify-center">
-              <Wallet className="w-10 h-10 text-emerald-500 animate-pulse" />
+            <div className="absolute -inset-4 bg-[#688746]/20 rounded-full blur-xl animate-pulse" />
+            <div className="relative p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl flex items-center justify-center">
+              <HomeMoneyLogo size="xl" showText={false} />
             </div>
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              HomeMoney
-            </h1>
+            <HomeMoneyLogo size="lg" showText={true} />
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Carregando seus dados financeiros...
             </p>
@@ -661,7 +660,7 @@ export default function HomePage() {
 
           {/* Barra de Progresso Suave */}
           <div className="w-48 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-500 rounded-full animate-pulse w-3/4" />
+            <div className="h-full bg-[#688746] rounded-full animate-pulse w-3/4" />
           </div>
         </div>
       </div>
@@ -700,19 +699,10 @@ export default function HomePage() {
           sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-4'
         }`}>
           <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} overflow-hidden`}>
-            <div className="w-10 h-10 min-w-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-md shadow-emerald-500/20 text-slate-950 font-bold shrink-0">
-              <Wallet className="w-5 h-5 text-slate-950" />
-            </div>
-            {!sidebarCollapsed && (
-              <div className="truncate">
-                <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
-                  HomeMoney
-                </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block -mt-0.5">
-                  Gestão Pessoal
-                </span>
-              </div>
-            )}
+            <HomeMoneyLogo
+              size={sidebarCollapsed ? 'sm' : 'md'}
+              showText={!sidebarCollapsed}
+            />
           </div>
 
           <button
@@ -2177,6 +2167,8 @@ export default function HomePage() {
               formatBRL={formatBRL}
               pendingTransfers={pendingTransfers}
               onOpenTransferModal={() => setIsTransferModalOpen(true)}
+              accounts={accounts}
+              categories={categories}
             />
           )}
 

@@ -24,6 +24,11 @@ import {
   Clock,
   ArrowRight,
   HandCoins,
+  AlertTriangle,
+  Search,
+  Filter,
+  ShieldAlert,
+  UserCheck,
 } from 'lucide-react';
 import {
   updateUserProfile,
@@ -36,6 +41,8 @@ import {
   updatePerson,
   deletePerson,
   clearAuthToken,
+  fetchBulkDeletePreview,
+  executeBulkDelete,
 } from '../lib/api';
 
 interface ProfileContactsViewProps {
@@ -45,6 +52,8 @@ interface ProfileContactsViewProps {
   formatBRL: (val: number) => string;
   pendingTransfers?: any[];
   onOpenTransferModal?: () => void;
+  accounts?: any[];
+  categories?: any[];
 }
 
 export function ProfileContactsView({
@@ -54,6 +63,8 @@ export function ProfileContactsView({
   formatBRL,
   pendingTransfers = [],
   onOpenTransferModal,
+  accounts = [],
+  categories = [],
 }: ProfileContactsViewProps) {
   const router = useRouter();
 
@@ -88,6 +99,83 @@ export function ProfileContactsView({
   const [contactEmail, setContactEmail] = useState('');
   const [contactError, setContactError] = useState('');
   const [contactLoading, setContactLoading] = useState(false);
+
+  // Contacts Table Filter & Search
+  const [contactSearch, setContactSearch] = useState('');
+  const [contactFilter, setContactFilter] = useState<'ALL' | 'LINKED' | 'LOCAL' | 'PENDING'>('ALL');
+
+  // Danger Zone State
+  const [dangerScope, setDangerScope] = useState<'ALL' | 'MONTH' | 'ACCOUNT' | 'CATEGORY' | 'PAID' | 'UNPAID'>('ALL');
+  const [dangerMonth, setDangerMonth] = useState('');
+  const [dangerAccountId, setDangerAccountId] = useState('');
+  const [dangerCategoryId, setDangerCategoryId] = useState('');
+  const [dangerConfirmText, setDangerConfirmText] = useState('');
+  const [dangerPreview, setDangerPreview] = useState<{ count: number; totalAmount: number }>({ count: 0, totalAmount: 0 });
+  const [dangerLoading, setDangerLoading] = useState(false);
+  const [dangerDeleting, setDangerDeleting] = useState(false);
+  const [dangerFeedback, setDangerFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const loadDangerPreview = async () => {
+    try {
+      setDangerLoading(true);
+      const filters: any = { scope: dangerScope };
+      if (dangerScope === 'MONTH' && dangerMonth) filters.month = dangerMonth;
+      if (dangerScope === 'ACCOUNT' && dangerAccountId) filters.accountId = dangerAccountId;
+      if (dangerScope === 'CATEGORY' && dangerCategoryId) filters.categoryId = dangerCategoryId;
+      if (dangerScope === 'PAID') filters.paid = true;
+      if (dangerScope === 'UNPAID') filters.paid = false;
+
+      const preview = await fetchBulkDeletePreview(filters);
+      setDangerPreview(preview);
+    } catch (e: any) {
+      console.warn('Erro ao carregar prévia da zona de perigo:', e);
+    } finally {
+      setDangerLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (subTab === 'PROFILE') {
+      loadDangerPreview();
+    }
+  }, [subTab, dangerScope, dangerMonth, dangerAccountId, dangerCategoryId]);
+
+  const handleExecuteBulkDelete = async () => {
+    if (dangerConfirmText.trim().toUpperCase() !== 'EXCLUIR') return;
+    if (
+      !confirm(
+        `CONFIRMAÇÃO FINAL: Deseja realmente excluir permanentemente ${dangerPreview.count} transação(ões)? Esta ação não poderá ser desfeita.`
+      )
+    ) {
+      return;
+    }
+    try {
+      setDangerDeleting(true);
+      setDangerFeedback(null);
+      const filters: any = { scope: dangerScope };
+      if (dangerScope === 'MONTH' && dangerMonth) filters.month = dangerMonth;
+      if (dangerScope === 'ACCOUNT' && dangerAccountId) filters.accountId = dangerAccountId;
+      if (dangerScope === 'CATEGORY' && dangerCategoryId) filters.categoryId = dangerCategoryId;
+      if (dangerScope === 'PAID') filters.paid = true;
+      if (dangerScope === 'UNPAID') filters.paid = false;
+
+      const res = await executeBulkDelete(filters);
+      setDangerFeedback({
+        type: 'success',
+        text: `Sucesso! ${res.deletedCount} transação(ões) foram excluídas definitivamente.`,
+      });
+      setDangerConfirmText('');
+      onRefreshData();
+      await loadDangerPreview();
+    } catch (e: any) {
+      setDangerFeedback({
+        type: 'error',
+        text: e?.message || 'Falha ao executar exclusão em massa.',
+      });
+    } finally {
+      setDangerDeleting(false);
+    }
+  };
 
   // Load invites
   const loadInvites = async () => {
@@ -506,130 +594,300 @@ export function ProfileContactsView({
             </div>
           )}
 
-          {/* Contacts Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {people.map((person) => {
-              const isLinked = !!person.linkedUser || !!person.linkedUserId;
+          {/* Contacts Table Controls: Search & Tabs */}
+          {(() => {
+            const filteredContacts = people.filter((p) => {
+              const searchLower = contactSearch.toLowerCase();
+              const matches =
+                p.name.toLowerCase().includes(searchLower) ||
+                (p.notes && p.notes.toLowerCase().includes(searchLower)) ||
+                (p.linkedUser?.name && p.linkedUser.name.toLowerCase().includes(searchLower)) ||
+                (p.linkedUser?.email && p.linkedUser.email.toLowerCase().includes(searchLower));
+              if (!matches) return false;
 
-              return (
-                <div
-                  key={person.id}
-                  className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 transition shadow-sm flex flex-col justify-between"
-                >
-                  <div>
-                    {/* Contact Header */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
+              if (contactFilter === 'LINKED') return Boolean(p.linkedUser || p.linkedUserId);
+              if (contactFilter === 'LOCAL') return !p.linkedUser && !p.linkedUserId;
+              if (contactFilter === 'PENDING') return (p.netBalance && p.netBalance !== 0) || (p.toReceive > 0 || p.toPay > 0);
+              return true;
+            });
+
+            return (
+              <div className="space-y-4">
+                {/* Search & Tabs */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="relative w-full sm:w-80">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      placeholder="Pesquisar por nome, e-mail, notas..."
+                      value={contactSearch}
+                      onChange={(e) => setContactSearch(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 transition shadow-sm"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm self-start sm:self-auto overflow-x-auto max-w-full">
+                    <button
+                      type="button"
+                      onClick={() => setContactFilter('ALL')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                        contactFilter === 'ALL'
+                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Todos ({people.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setContactFilter('LINKED')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                        contactFilter === 'LINKED'
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Vinculados ({people.filter((p) => p.linkedUser || p.linkedUserId).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setContactFilter('LOCAL')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                        contactFilter === 'LOCAL'
+                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Locais ({people.filter((p) => !p.linkedUser && !p.linkedUserId).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setContactFilter('PENDING')}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                        contactFilter === 'PENDING'
+                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                          : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Com Pendências ({people.filter((p) => (p.netBalance && p.netBalance !== 0) || (p.toReceive > 0 || p.toPay > 0)).length})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Table Container */}
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 overflow-hidden shadow-sm w-full max-w-full">
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto w-full max-w-full">
+                    <table className="w-full text-left text-sm min-w-[650px]">
+                      <thead className="bg-slate-50 dark:bg-slate-900/80 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                        <tr>
+                          <th className="py-3 px-4">Contato</th>
+                          <th className="py-3 px-4">Vínculo HomeMoney</th>
+                          <th className="py-3 px-4">Saldo Pendente</th>
+                          <th className="py-3 px-4 text-center">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
+                        {filteredContacts.map((person) => {
+                          const isLinked = !!person.linkedUser || !!person.linkedUserId;
+                          return (
+                            <tr key={person.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
+                              {/* Contato Info */}
+                              <td className="py-3.5 px-4">
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
+                                      isLinked
+                                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                                    }`}
+                                  >
+                                    {person.name.slice(0, 2).toUpperCase()}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-bold text-slate-900 dark:text-white text-sm truncate">
+                                        {person.name}
+                                      </span>
+                                      {isLinked && (
+                                        <span title="Vinculado a usuário HomeMoney" className="text-emerald-500 shrink-0">
+                                          <Link2 className="w-3.5 h-3.5" />
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-xs text-slate-400 dark:text-slate-500 truncate block">
+                                      {person.notes || 'Sem observações'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {/* Vínculo HomeMoney */}
+                              <td className="py-3.5 px-4">
+                                {isLinked ? (
+                                  <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs">
+                                    <UserCheck className="w-3.5 h-3.5 shrink-0" />
+                                    <span className="font-semibold truncate max-w-[220px]">
+                                      {person.linkedUser?.name || 'Usuário Real'} ({person.linkedUser?.email || 'vinculado'})
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUnlink(person)}
+                                      className="p-1 rounded text-rose-500 hover:bg-rose-500/10 transition ml-1"
+                                      title="Desvincular usuário"
+                                    >
+                                      <Unlink className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-slate-400 dark:text-slate-500 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/80">
+                                      Contato local
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEditContact(person)}
+                                      className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Link2 className="w-3 h-3" />
+                                      Vincular
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* Saldo Pendente */}
+                              <td className="py-3.5 px-4">
+                                <span
+                                  className={`text-xs font-bold font-mono px-2.5 py-1 rounded-lg ${
+                                    person.netBalance > 0
+                                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                      : person.netBalance < 0
+                                      ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                                  }`}
+                                >
+                                  {formatBRL(person.netBalance || 0)}
+                                </span>
+                              </td>
+
+                              {/* Ações */}
+                              <td className="py-3.5 px-4 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditContact(person)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                                    title="Editar contato"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteContact(person)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
+                                    title="Excluir contato"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {filteredContacts.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
+                              Nenhum contato encontrado para este filtro.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Compact View (100% width, no horizontal scroll) */}
+                  <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/80">
+                    {filteredContacts.map((person) => {
+                      const isLinked = !!person.linkedUser || !!person.linkedUserId;
+                      return (
                         <div
-                          className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-sm ${
-                            isLinked
-                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                          }`}
+                          key={person.id}
+                          className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition"
                         >
-                          {person.name.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            {person.name}
-                            {isLinked && (
-                              <span title="Vinculado a usuário real" className="inline-flex">
-                                <Link2 className="w-3.5 h-3.5 text-emerald-500" />
-                              </span>
-                            )}
-                          </h4>
-                          <span className="text-[11px] text-slate-400 block line-clamp-1">
-                            {person.notes || 'Sem observações'}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleOpenEditContact(person)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                          title="Editar Contato"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteContact(person)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
-                          title="Excluir Contato"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Financial Summary */}
-                    <div className="mt-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs">
-                      <span className="text-slate-500 dark:text-slate-400 font-medium">Saldo Pendente:</span>
-                      <span
-                        className={`font-mono font-bold ${
-                          person.netBalance > 0
-                            ? 'text-emerald-600 dark:text-emerald-400'
-                            : person.netBalance < 0
-                            ? 'text-rose-500'
-                            : 'text-slate-500 dark:text-slate-400'
-                        }`}
-                      >
-                        {formatBRL(person.netBalance)}
-                      </span>
-                    </div>
-
-                    {/* Link Status Pill */}
-                    <div className="mt-3">
-                      {isLinked ? (
-                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
-                          <div className="truncate pr-2">
-                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block uppercase tracking-wider">
-                              Usuário Vinculado
-                            </span>
-                            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 block truncate">
-                              {person.linkedUser?.name || 'Usuário Real'} ({person.linkedUser?.email || 'vinculado'})
-                            </span>
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div
+                              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
+                                isLinked
+                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                              }`}
+                            >
+                              {person.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-slate-900 dark:text-white text-xs truncate">
+                                  {person.name}
+                                </span>
+                                {isLinked && <Link2 className="w-3 h-3 text-emerald-500 shrink-0" />}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                {isLinked ? (
+                                  <span className="text-emerald-600 dark:text-emerald-400 truncate">
+                                    {person.linkedUser?.email || 'Vinculado'}
+                                  </span>
+                                ) : (
+                                  <span className="truncate">Local</span>
+                                )}
+                                <span>•</span>
+                                <span
+                                  className={`font-mono font-bold ${
+                                    person.netBalance > 0
+                                      ? 'text-emerald-600 dark:text-emerald-400'
+                                      : person.netBalance < 0
+                                      ? 'text-rose-500'
+                                      : 'text-slate-400'
+                                  }`}
+                                >
+                                  {formatBRL(person.netBalance || 0)}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1">
+
+                          {/* Quick Action Buttons */}
+                          <div className="flex items-center gap-1 shrink-0">
                             <button
                               type="button"
                               onClick={() => handleOpenEditContact(person)}
-                              className="p-1.5 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition"
-                              title="Editar contato e vínculo"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                              title="Editar"
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                              <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleUnlink(person)}
-                              className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
-                              title="Desvincular usuário"
+                              onClick={() => handleDeleteContact(person)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
+                              title="Excluir"
                             >
-                              <Unlink className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
-                      ) : (
-                        <div className="p-2 rounded-xl bg-slate-100/60 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-800 flex items-center justify-between">
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
-                            Contato local
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditContact(person)}
-                            className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
-                          >
-                            <Link2 className="w-3 h-3" />
-                            <span>Vincular usuário</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                      );
+                    })}
+                    {filteredContacts.length === 0 && (
+                      <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
+                        Nenhum contato encontrado para este filtro.
+                      </div>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -765,6 +1023,171 @@ export function ProfileContactsView({
                 </button>
               </div>
             </form>
+          </div>
+
+          {/* Zona de Perigo: Exclusão em Massa de Transações com Filtros */}
+          <div className="p-6 rounded-3xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/60 shadow-sm space-y-5">
+            <div className="flex items-start gap-3 border-b border-rose-200/80 dark:border-rose-900/60 pb-4">
+              <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 mt-0.5 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-rose-700 dark:text-rose-400 flex items-center gap-2">
+                  <span>Zona de Perigo: Exclusão em Massa</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30">
+                    IRREVERSÍVEL
+                  </span>
+                </h3>
+                <p className="text-xs text-rose-600/80 dark:text-rose-300/80 mt-0.5">
+                  Exclua permanentemente transações financeiras da sua conta. Você pode escolher limpar todo o histórico ou filtrar por período, carteira, categoria ou status.
+                </p>
+              </div>
+            </div>
+
+            {dangerFeedback && (
+              <div
+                className={`p-3.5 rounded-xl border flex items-center gap-2.5 text-xs animate-in fade-in ${
+                  dangerFeedback.type === 'success'
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-semibold'
+                    : 'bg-rose-100 dark:bg-rose-900/40 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 font-semibold'
+                }`}
+              >
+                {dangerFeedback.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 min-w-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 min-w-4 text-rose-600 shrink-0" />
+                )}
+                <span>{dangerFeedback.text}</span>
+              </div>
+            )}
+
+            {/* Filtros da Zona de Perigo */}
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                1. Selecione o Escopo da Exclusão
+              </label>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { id: 'ALL', label: 'Tudo (Total)' },
+                  { id: 'MONTH', label: 'Por Mês' },
+                  { id: 'ACCOUNT', label: 'Por Carteira' },
+                  { id: 'CATEGORY', label: 'Por Categoria' },
+                  { id: 'PAID', label: 'Apenas Pagas' },
+                  { id: 'UNPAID', label: 'Apenas Pendentes' },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setDangerScope(item.id as any)}
+                    className={`py-2 px-3 rounded-xl text-xs font-semibold border transition ${
+                      dangerScope === item.id
+                        ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-rose-400'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sub-filtros conforme o escopo */}
+              {dangerScope === 'MONTH' && (
+                <div className="pt-2 animate-in fade-in">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Mês de Referência (YYYY-MM):
+                  </label>
+                  <input
+                    type="month"
+                    value={dangerMonth}
+                    onChange={(e) => setDangerMonth(e.target.value)}
+                    className="w-full sm:w-64 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+              )}
+
+              {dangerScope === 'ACCOUNT' && (
+                <div className="pt-2 animate-in fade-in">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Carteira / Conta:
+                  </label>
+                  <select
+                    value={dangerAccountId}
+                    onChange={(e) => setDangerAccountId(e.target.value)}
+                    className="w-full sm:w-64 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500"
+                  >
+                    <option value="">Todas as carteiras</option>
+                    {accounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {dangerScope === 'CATEGORY' && (
+                <div className="pt-2 animate-in fade-in">
+                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Categoria:
+                  </label>
+                  <select
+                    value={dangerCategoryId}
+                    onChange={(e) => setDangerCategoryId(e.target.value)}
+                    className="w-full sm:w-64 px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-rose-500"
+                  >
+                    <option value="">Todas as categorias</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Prévia dos Dados */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/60 flex items-center justify-between text-xs">
+              <span className="text-slate-600 dark:text-slate-300 font-medium">
+                Transações encontradas para o filtro selecionado:
+              </span>
+              <span className="font-bold text-rose-600 dark:text-rose-400">
+                {dangerLoading ? 'Calculando...' : `${dangerPreview.count} itens (${formatBRL(dangerPreview.totalAmount)})`}
+              </span>
+            </div>
+
+            {/* Confirmação de Segurança */}
+            <div className="space-y-3 pt-2 border-t border-rose-200/80 dark:border-rose-900/60">
+              <div>
+                <label className="block text-xs font-semibold text-rose-700 dark:text-rose-300 mb-1">
+                  2. Para confirmar a exclusão irreversível, digite &ldquo;EXCLUIR&rdquo; abaixo:
+                </label>
+                <input
+                  type="text"
+                  value={dangerConfirmText}
+                  onChange={(e) => setDangerConfirmText(e.target.value)}
+                  placeholder="EXCLUIR"
+                  className="w-full px-3 py-2 text-xs uppercase font-mono tracking-wider bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-900/80 rounded-xl text-rose-700 dark:text-rose-300 outline-none focus:ring-2 focus:ring-rose-500"
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={
+                  dangerConfirmText.trim().toUpperCase() !== 'EXCLUIR' ||
+                  dangerPreview.count === 0 ||
+                  dangerDeleting
+                }
+                onClick={handleExecuteBulkDelete}
+                className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                {dangerDeleting
+                  ? 'Excluindo transações permanentemente...'
+                  : `Excluir Definitivamente (${dangerPreview.count} transações)`}
+              </button>
+            </div>
           </div>
         </div>
       )}

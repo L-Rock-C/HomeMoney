@@ -222,4 +222,65 @@ export const transactionsRoutes: FastifyPluginAsync = async (app) => {
     await prisma.transaction.delete({ where: { id } });
     return reply.status(204).send();
   });
+
+  // Helper para construir filtros de exclusão em massa
+  function buildBulkFilter(userId: string, body: any) {
+    const where: any = { userId };
+    if (!body || body.scope === 'ALL') {
+      return where;
+    }
+    if (body.month) {
+      const [year, month] = body.month.split('-').map(Number);
+      const start = new Date(Date.UTC(year, month - 1, 1));
+      const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+      where.dueDate = { gte: start, lte: end };
+    } else if (body.startDate || body.endDate) {
+      where.dueDate = {};
+      if (body.startDate) where.dueDate.gte = new Date(body.startDate + 'T00:00:00Z');
+      if (body.endDate) where.dueDate.lte = new Date(body.endDate + 'T23:59:59Z');
+    }
+
+    if (body.accountId && body.accountId !== 'ALL') where.accountId = body.accountId;
+    if (body.categoryId && body.categoryId !== 'ALL') where.categoryId = body.categoryId;
+    if (body.personId && body.personId !== 'ALL') where.personId = body.personId;
+    if (body.type && body.type !== 'ALL') where.type = body.type;
+    if (body.paid !== undefined && body.paid !== 'ALL' && body.paid !== null) {
+      where.paid = body.paid === true || body.paid === 'true';
+    }
+
+    return where;
+  }
+
+  // Preview de exclusão em massa (Zona de Perigo)
+  app.post('/bulk-delete-preview', async (request, reply) => {
+    const userId = await getRequestUserId(request);
+    const body = (request.body as any) || {};
+    const where = buildBulkFilter(userId, body);
+
+    const [count, aggregate] = await Promise.all([
+      prisma.transaction.count({ where }),
+      prisma.transaction.aggregate({
+        where,
+        _sum: { amount: true },
+      }),
+    ]);
+
+    return reply.send({
+      count,
+      totalAmount: aggregate._sum.amount || 0,
+    });
+  });
+
+  // Executar exclusão em massa (Zona de Perigo)
+  app.post('/bulk-delete', async (request, reply) => {
+    const userId = await getRequestUserId(request);
+    const body = (request.body as any) || {};
+    const where = buildBulkFilter(userId, body);
+
+    const result = await prisma.transaction.deleteMany({ where });
+
+    return reply.send({
+      deletedCount: result.count,
+    });
+  });
 };

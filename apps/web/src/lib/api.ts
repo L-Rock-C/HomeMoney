@@ -576,4 +576,42 @@ export async function simulateTransferNotification(data: {
   return res.json();
 }
 
+export interface BulkDeleteFilters {
+  scope?: 'ALL' | 'FILTERED';
+  month?: string;
+  startDate?: string;
+  endDate?: string;
+  accountId?: string;
+  categoryId?: string;
+  personId?: string;
+  type?: string;
+  paid?: boolean | string;
+}
+
+export async function fetchBulkDeletePreview(filters: BulkDeleteFilters) {
+  const res = await fetch(`${API_BASE}/transactions/bulk-delete-preview`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(filters),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Falha ao obter prévia de exclusão');
+  }
+  return res.json() as Promise<{ count: number; totalAmount: number }>;
+}
+
+export async function executeBulkDelete(filters: BulkDeleteFilters) {
+  const res = await fetch(`${API_BASE}/transactions/bulk-delete`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(filters),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Falha ao executar exclusão em massa');
+  }
+  return res.json() as Promise<{ deletedCount: number }>;
+}
+
 
