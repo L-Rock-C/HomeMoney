@@ -115,6 +115,20 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
+        public void checkNotificationsNow() {
+            try {
+                if (BankNotificationListener.instance != null) {
+                    BankNotificationListener.instance.scanActiveNotifications();
+                }
+                if (context instanceof MainActivity) {
+                    ((MainActivity) context).runOnUiThread(() -> {
+                        ((MainActivity) context).syncPendingBankNotifications();
+                    });
+                }
+            } catch (Exception ignored) {}
+        }
+
+        @JavascriptInterface
         public void openNotificationSettings() {
             try {
                 Intent intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);

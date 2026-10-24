@@ -66,6 +66,7 @@ import {
   BankNotification,
   getPendingQueue,
   getDismissedHistory,
+  triggerAndroidNotificationCheck,
 } from '../lib/bankNotificationService';
 
 const getCurrentMonthKey = () => {
@@ -127,11 +128,32 @@ export default function HomePage() {
   const [dismissedCount, setDismissedCount] = useState(0);
   const [isQueueModalOpen, setIsQueueModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isCheckingNotifications, setIsCheckingNotifications] = useState(false);
+  const [checkFeedback, setCheckFeedback] = useState<string | null>(null);
 
   const refreshQueueData = () => {
     const queue = getPendingQueue();
     setPendingQueue(queue);
     setDismissedCount(getDismissedHistory().length);
+  };
+
+  const handleCheckNotifications = () => {
+    setIsCheckingNotifications(true);
+    triggerAndroidNotificationCheck();
+
+    // Sincroniza e lê a fila após disparo nativo
+    setTimeout(() => {
+      refreshQueueData();
+      setIsCheckingNotifications(false);
+
+      const queue = getPendingQueue();
+      if (queue.length > 0) {
+        setCheckFeedback(`${queue.length} ${queue.length === 1 ? 'sugestão encontrada' : 'sugestões na fila'}`);
+      } else {
+        setCheckFeedback('Fila atualizada');
+      }
+      setTimeout(() => setCheckFeedback(null), 3000);
+    }, 700);
   };
 
   useEffect(() => {
@@ -748,17 +770,48 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 relative">
             {activeTab !== 'PROFILE' && (
-              <button
-                onClick={handleOpenCreate}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/20 transition hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap cursor-pointer"
-              >
-                <Plus className="w-4 h-4 stroke-[3]" />
-                <span>
-                  <span className="hidden sm:inline">Nova </span>Transação
-                </span>
-              </button>
+              <>
+                {/* Botão de Checagem e Atualização de Notificações */}
+                <button
+                  type="button"
+                  onClick={handleCheckNotifications}
+                  disabled={isCheckingNotifications}
+                  className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500/30 dark:hover:border-emerald-500/30 hover:bg-emerald-500/5 transition hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap cursor-pointer shadow-xs disabled:opacity-60 group"
+                  title="Checar notificações do celular e atualizar sugestões"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 transition-transform ${
+                      isCheckingNotifications ? 'animate-spin' : 'group-hover:rotate-45'
+                    }`}
+                  />
+                  <span>
+                    <span className="hidden sm:inline">Checar </span>Notificações
+                  </span>
+                  {pendingQueue.length > 0 && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500 text-white dark:text-slate-950 leading-none">
+                      {pendingQueue.length}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleOpenCreate}
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/20 transition hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap cursor-pointer"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>
+                    <span className="hidden sm:inline">Nova </span>Transação
+                  </span>
+                </button>
+              </>
+            )}
+
+            {checkFeedback && (
+              <div className="absolute -bottom-8 right-0 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/90 border border-emerald-500/30 px-2.5 py-1 rounded-lg shadow-md pointer-events-none animate-in fade-in slide-in-from-top-1 z-40 whitespace-nowrap">
+                {checkFeedback}
+              </div>
             )}
           </div>
         </header>

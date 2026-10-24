@@ -456,6 +456,20 @@ export function openAndroidNotificationSettings(): boolean {
   return false;
 }
 
+export function triggerAndroidNotificationCheck(): boolean {
+  if (typeof window !== 'undefined' && (window as any).AndroidNotificationBridge) {
+    try {
+      if (typeof (window as any).AndroidNotificationBridge.checkNotificationsNow === 'function') {
+        (window as any).AndroidNotificationBridge.checkNotificationsNow();
+        return true;
+      }
+    } catch (e) {
+      console.warn('Erro ao chamar checkNotificationsNow:', e);
+    }
+  }
+  return false;
+}
+
 // ============================================================================
 // Ouvinte do Evento Nativo do Android (Capacitor Bridge)
 // ============================================================================

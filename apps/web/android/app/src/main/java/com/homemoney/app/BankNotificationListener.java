@@ -22,6 +22,38 @@ public class BankNotificationListener extends NotificationListenerService {
     public static final String PREFS_NAME = "HomeMoneyNotifications";
     public static final String KEY_PENDING = "pending_notifications";
 
+    public static volatile BankNotificationListener instance;
+
+    @Override
+    public void onListenerConnected() {
+        super.onListenerConnected();
+        instance = this;
+        Log.d(TAG, "BankNotificationListener conectado com sucesso!");
+    }
+
+    @Override
+    public void onListenerDisconnected() {
+        super.onListenerDisconnected();
+        if (instance == this) {
+            instance = null;
+        }
+        Log.d(TAG, "BankNotificationListener desconectado.");
+    }
+
+    public void scanActiveNotifications() {
+        try {
+            StatusBarNotification[] active = getActiveNotifications();
+            if (active != null) {
+                Log.d(TAG, "Escaneando " + active.length + " notificações ativas na bandeja...");
+                for (StatusBarNotification sbn : active) {
+                    onNotificationPosted(sbn);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Erro ao escanear notificações ativas", e);
+        }
+    }
+
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
         if (sbn == null || sbn.getNotification() == null) return;
