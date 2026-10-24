@@ -38,6 +38,8 @@ import {
   BellRing,
   Sparkles,
   History,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import {
   fetchMonthlyReports,
@@ -57,6 +59,7 @@ import {
 import { TransactionModal } from '../components/TransactionModal';
 import { SettleModal } from '../components/SettleModal';
 import { ManagerModal } from '../components/ManagerModal';
+import { ManagerView } from '../components/ManagerView';
 import { WalletModal } from '../components/WalletModal';
 import { ReconciliationQueueModal } from '../components/ReconciliationQueueModal';
 import { NotificationHistoryModal } from '../components/NotificationHistoryModal';
@@ -94,7 +97,9 @@ export default function HomePage() {
 
   // App data states
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'TRANSACTIONS' | 'BALANCE' | 'PEOPLE' | 'WALLETS' | 'PROFILE' | 'SUGGESTIONS'>('DASHBOARD');
+  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'TRANSACTIONS' | 'BALANCE' | 'PEOPLE' | 'WALLETS' | 'PROFILE' | 'SUGGESTIONS' | 'MANAGER'>('DASHBOARD');
+  const [showTransactionKPIs, setShowTransactionKPIs] = useState(false);
+  const [showWalletKPIs, setShowWalletKPIs] = useState(false);
 
 
   // Date Filter states
@@ -708,13 +713,16 @@ export default function HomePage() {
           <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80">
             <button
               onClick={() => {
-                setManagerSection('CATEGORIES');
-                setIsManagerOpen(true);
+                setActiveTab('MANAGER');
                 setMobileMenuOpen(false);
               }}
               className={`w-full flex items-center ${
                 sidebarCollapsed ? 'justify-center px-0' : 'px-3 gap-3'
-              } py-2.5 rounded-xl text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition`}
+              } py-2.5 rounded-xl text-sm font-medium transition cursor-pointer ${
+                activeTab === 'MANAGER'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
+              }`}
               title="Gerenciador de Cadastros"
             >
               <Settings className="w-5 h-5 min-w-5 shrink-0" />
@@ -814,12 +822,13 @@ export default function HomePage() {
                 {activeTab === 'WALLETS' && 'Carteiras & Poupanças'}
                 {activeTab === 'PROFILE' && 'Meu Perfil & Conexões'}
                 {activeTab === 'SUGGESTIONS' && 'Histórico de Sugestões Bancárias'}
+                {activeTab === 'MANAGER' && 'Gerenciador de Cadastros'}
               </h2>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0 relative">
-            {activeTab !== 'PROFILE' && activeTab !== 'SUGGESTIONS' && (
+            {activeTab !== 'PROFILE' && activeTab !== 'SUGGESTIONS' && activeTab !== 'MANAGER' && (
               <>
                 {/* Botão de Checagem e Atualização de Notificações */}
                 <button
@@ -1032,95 +1041,123 @@ export default function HomePage() {
           </div>
 
           {/* ========================================================================= */}
-          {/* KPI Summary Cards */}
+          {/* KPI Summary Cards: Sempre visíveis em DASHBOARD e BALANCE, com Toggle em TRANSACTIONS */}
           {/* ========================================================================= */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Total Receitas
+          {activeTab === 'TRANSACTIONS' && (
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setShowTransactionKPIs(!showTransactionKPIs)}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-500/50 hover:text-emerald-600 dark:hover:text-emerald-400 transition shadow-sm cursor-pointer"
+              >
+                {showTransactionKPIs ? (
+                  <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+                ) : (
+                  <Eye className="w-3.5 h-3.5 text-emerald-500" />
+                )}
+                <span>
+                  {showTransactionKPIs
+                    ? 'Ocultar Resumo Financeiro'
+                    : 'Exibir Resumo (Total Receitas, Despesas, Saldo)'}
                 </span>
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                  <ArrowUpRight className="w-4 h-4" />
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                    showTransactionKPIs ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+            </div>
+          )}
+
+          {(activeTab !== 'TRANSACTIONS' || showTransactionKPIs) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-150">
+              <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Total Receitas
+                  </span>
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                    <ArrowUpRight className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+                  {formatBRL(currentMonthData.totalIncome)}
+                </div>
+                <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                  <span>Receitas do período</span>
                 </div>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-                {formatBRL(currentMonthData.totalIncome)}
-              </div>
-              <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                <span>Receitas do período</span>
-              </div>
-            </div>
 
-            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Total Despesas
-                </span>
-                <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500">
-                  <ArrowDownRight className="w-4 h-4" />
+              <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Total Despesas
+                  </span>
+                  <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500">
+                    <ArrowDownRight className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+                  {formatBRL(currentMonthData.totalExpense)}
+                </div>
+                <div className="mt-2 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                  <span>Gastos liquidados</span>
                 </div>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-                {formatBRL(currentMonthData.totalExpense)}
-              </div>
-              <div className="mt-2 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                <span>Gastos liquidados</span>
-              </div>
-            </div>
 
-            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Saldo Líquido
-                </span>
+              <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Saldo Líquido
+                  </span>
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      currentMonthData.netBalance >= 0
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-rose-500/10 text-rose-500'
+                    }`}
+                  >
+                    <Scale className="w-4 h-4" />
+                  </div>
+                </div>
                 <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  className={`text-2xl font-bold tracking-tight ${
                     currentMonthData.netBalance >= 0
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                      : 'bg-rose-500/10 text-rose-500'
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-rose-500'
                   }`}
                 >
-                  <Scale className="w-4 h-4" />
+                  {formatBRL(currentMonthData.netBalance)}
+                </div>
+                <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  Receitas menos despesas
                 </div>
               </div>
-              <div
-                className={`text-2xl font-bold tracking-tight ${
-                  currentMonthData.netBalance >= 0
-                    ? 'text-emerald-600 dark:text-emerald-400'
-                    : 'text-rose-500'
-                }`}
-              >
-                {formatBRL(currentMonthData.netBalance)}
-              </div>
-              <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                Receitas menos despesas
-              </div>
-            </div>
 
-            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Saldo Acumulado
-                </span>
-                <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
-                  <TrendingUp className="w-4 h-4" />
+              <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    Saldo Acumulado
+                  </span>
+                  <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-teal-400">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                </div>
+                <div
+                  className={`text-2xl font-bold tracking-tight ${
+                    currentMonthData.accumulatedBalance >= 0
+                      ? 'text-slate-900 dark:text-white'
+                      : 'text-rose-500'
+                  }`}
+                >
+                  {formatBRL(currentMonthData.accumulatedBalance)}
+                </div>
+                <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  Patrimônio acumulado
                 </div>
               </div>
-              <div
-                className={`text-2xl font-bold tracking-tight ${
-                  currentMonthData.accumulatedBalance >= 0
-                    ? 'text-slate-900 dark:text-white'
-                    : 'text-rose-500'
-                }`}
-              >
-                {formatBRL(currentMonthData.accumulatedBalance)}
-              </div>
-              <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                Patrimônio acumulado
-              </div>
             </div>
-          </div>
+          )}
         </>
       )}
 
@@ -1614,80 +1651,102 @@ export default function HomePage() {
                     Acompanhe o saldo consolidado de suas contas correntes, caixinhas de poupança e reservas financeiras.
                   </p>
                 </div>
-                <button
-                  onClick={() => {
-                    setWalletToEdit(null);
-                    setIsWalletModalOpen(true);
-                  }}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/20 transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-                >
-                  <Plus className="w-4 h-4 stroke-[3]" />
-                  Nova Carteira / Poupança
-                </button>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setShowWalletKPIs(!showWalletKPIs)}
+                    className="px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition flex items-center gap-2 cursor-pointer shadow-xs"
+                  >
+                    {showWalletKPIs ? (
+                      <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+                    ) : (
+                      <Eye className="w-3.5 h-3.5 text-emerald-500" />
+                    )}
+                    <span>{showWalletKPIs ? 'Ocultar Resumo' : 'Exibir Resumo de Saldos'}</span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                        showWalletKPIs ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setWalletToEdit(null);
+                      setIsWalletModalOpen(true);
+                    }}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/20 transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4 stroke-[3]" />
+                    Nova Carteira / Poupança
+                  </button>
+                </div>
               </div>
 
-              {/* Summary KPIs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    Saldo Total Consolidado
-                  </span>
-                  <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                    {formatBRL(accounts.reduce((sum, a) => sum + (a.currentBalance || 0), 0))}
+              {/* Summary KPIs: Colapsável via Toggle */}
+              {showWalletKPIs && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-150">
+                  <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      Saldo Total Consolidado
+                    </span>
+                    <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                      {formatBRL(accounts.reduce((sum, a) => sum + (a.currentBalance || 0), 0))}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      {accounts.length} carteiras/poupanças cadastradas
+                    </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 mt-1 block">
-                    {accounts.length} carteiras/poupanças cadastradas
-                  </span>
-                </div>
 
-                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    Contas Correntes
-                  </span>
-                  <div className="text-xl font-bold text-slate-900 dark:text-white mt-1">
-                    {formatBRL(
-                      accounts
-                        .filter((a) => a.type === 'CHECKING')
-                        .reduce((sum, a) => sum + (a.currentBalance || 0), 0)
-                    )}
+                  <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      Contas Correntes
+                    </span>
+                    <div className="text-xl font-bold text-slate-900 dark:text-white mt-1">
+                      {formatBRL(
+                        accounts
+                          .filter((a) => a.type === 'CHECKING')
+                          .reduce((sum, a) => sum + (a.currentBalance || 0), 0)
+                      )}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      {accounts.filter((a) => a.type === 'CHECKING').length} contas principais
+                    </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 mt-1 block">
-                    {accounts.filter((a) => a.type === 'CHECKING').length} contas principais
-                  </span>
-                </div>
 
-                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    Poupanças & Caixinhas
-                  </span>
-                  <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
-                    {formatBRL(
-                      accounts
-                        .filter((a) => a.type === 'SAVINGS')
-                        .reduce((sum, a) => sum + (a.currentBalance || 0), 0)
-                    )}
+                  <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      Poupanças & Caixinhas
+                    </span>
+                    <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+                      {formatBRL(
+                        accounts
+                          .filter((a) => a.type === 'SAVINGS')
+                          .reduce((sum, a) => sum + (a.currentBalance || 0), 0)
+                      )}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      {accounts.filter((a) => a.type === 'SAVINGS').length} caixinhas ativas
+                    </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 mt-1 block">
-                    {accounts.filter((a) => a.type === 'SAVINGS').length} caixinhas ativas
-                  </span>
-                </div>
 
-                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    Dinheiro & Outros
-                  </span>
-                  <div className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">
-                    {formatBRL(
-                      accounts
-                        .filter((a) => a.type === 'WALLET' || a.type === 'INVESTMENT')
-                        .reduce((sum, a) => sum + (a.currentBalance || 0), 0)
-                    )}
+                  <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      Dinheiro & Outros
+                    </span>
+                    <div className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">
+                      {formatBRL(
+                        accounts
+                          .filter((a) => a.type === 'WALLET' || a.type === 'INVESTMENT')
+                          .reduce((sum, a) => sum + (a.currentBalance || 0), 0)
+                      )}
+                    </div>
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      Carteiras físicas e investimentos
+                    </span>
                   </div>
-                  <span className="text-[10px] text-slate-400 mt-1 block">
-                    Carteiras físicas e investimentos
-                  </span>
                 </div>
-              </div>
+              )}
 
               {/* Wallets Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1791,6 +1850,18 @@ export default function HomePage() {
             <NotificationHistoryView
               onOpenReconciliation={() => setIsQueueModalOpen(true)}
               onQueueUpdated={refreshQueueData}
+            />
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB 7: Gerenciador de Cadastros (Tela) */}
+          {/* ========================================================================= */}
+          {activeTab === 'MANAGER' && (
+            <ManagerView
+              categories={categories}
+              paymentMethods={paymentMethods}
+              onRefreshData={loadInitialData}
+              initialSection={managerSection}
             />
           )}
         </main>

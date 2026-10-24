@@ -564,7 +564,7 @@ export function TransactionModal({
           </div>
 
           {/* Parcelamento Livre & Status Pago */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
             <div>
               <TextInput
                 label="Número de Parcelas"
@@ -581,12 +581,13 @@ export function TransactionModal({
               />
             </div>
 
-            <div className="pb-2">
+            <div className="p-3 sm:p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
               <Checkbox
                 label="Já está liquidado/pago?"
                 description="Abate imediatamente do saldo da carteira"
                 checked={paid}
                 onChange={(val) => setPaid(val)}
+                align="center"
               />
             </div>
           </div>
@@ -602,18 +603,18 @@ export function TransactionModal({
           </div>
 
           {/* Actions */}
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col-reverse sm:flex-row items-center justify-center sm:justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              className="w-full sm:w-auto px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 rounded-xl text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/20 transition disabled:opacity-50 flex items-center gap-2"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/20 transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? 'Salvando...' : isEditing ? 'Salvar Alterações' : 'Cadastrar Transação'}
             </button>

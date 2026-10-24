@@ -166,6 +166,7 @@ export interface CheckboxProps {
   disabled?: boolean;
   id?: string;
   className?: string;
+  align?: 'start' | 'center';
 }
 
 export function Checkbox({
@@ -176,17 +177,18 @@ export function Checkbox({
   disabled = false,
   id,
   className = '',
+  align = 'center',
 }: CheckboxProps) {
   const checkboxId = id || (typeof label === 'string' ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
   return (
     <label
       htmlFor={checkboxId}
-      className={`group flex items-start gap-3 cursor-pointer select-none transition-opacity ${
+      className={`group flex ${align === 'start' ? 'items-start' : 'items-center'} gap-3 cursor-pointer select-none transition-opacity ${
         disabled ? 'opacity-50 cursor-not-allowed' : ''
       } ${className}`}
     >
-      <div className="relative flex items-center justify-center pt-0.5">
+      <div className={`relative flex items-center justify-center shrink-0 ${align === 'start' ? 'pt-0.5' : ''}`}>
         <input
           id={checkboxId}
           type="checkbox"
