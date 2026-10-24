@@ -42,11 +42,28 @@ export const BANK_RULES: BankRule[] = [
     color: '#820AD1',
     packages: ['com.nu.production', 'com.nubank'],
     patterns: [
+      // Pix Recebido / Transferência Recebida: "Você recebeu uma transferência de R$0,01 de Letícia Lima de Lucena Viana." ou "Fulano te enviou um Pix de R$ 150,00"
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /(?:recebeu|recebida|recebido|te\s+enviou).*?R\$\s*([0-9.,]+)(?:.*?(?:de|por)\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => {
+          let sender = m[2];
+          if (!sender && m.input) {
+            const beforeMatch = m.input.match(/^([^.]+?)\s+te\s+enviou/i);
+            if (beforeMatch) sender = beforeMatch[1];
+          }
+          return {
+            amount: parseBRLAmount(m[1]),
+            targetOrSource: cleanName(sender || 'Transferência Nubank'),
+          };
+        },
+      },
       // Pix Enviado: "Você transferiu R$ 80,00 para Allison Araújo no Pix." ou "Pix enviado: R$ 80,00 para Fulano"
       {
         type: 'EXPENSE',
         method: 'Pix',
-        regex: /(?:transferiu|enviou|pagou|transfer[eê]ncia|pix).*?R\$\s*([0-9.,]+).*?(?:para|a)\s+([^.]+?)(?:\s+(?:no|via|pelo)\s+Pix|\.|$)/i,
+        regex: /(?:transferiu|enviou|pagou|(?:transfer[eê]ncia|pix)\s+(?:enviad[ao]|realizad[ao]))\s*:?\s*(?:de\s*)?R\$\s*([0-9.,]+)\s+(?:para|a)\s+([^.]+?)(?:\s+(?:no|via|pelo)\s+Pix|\.|$)/i,
         extract: (m) => ({
           amount: parseBRLAmount(m[1]),
           targetOrSource: cleanName(m[2]),
@@ -67,25 +84,16 @@ export const BANK_RULES: BankRule[] = [
         type: 'EXPENSE',
         method: 'Crédito',
         regex: /(?:compra|pagamento).*?R\$\s*([0-9.,]+).*?(?:em|no|na)\s+([^.]+?)(?:\.|$)/i,
-        extract: (m) => ({
-          amount: parseBRLAmount(m[1]),
-          targetOrSource: cleanName(m[2]),
-        }),
-      },
-      // Pix Recebido / Transferência Recebida: "Você recebeu uma transferência de R$ 150,00 de Fulano." ou "Fulano te enviou um Pix de R$ 150,00"
-      {
-        type: 'INCOME',
-        method: 'Pix',
-        regex: /(?:recebeu|recebida|recebido|te\s+enviou).*?R\$\s*([0-9.,]+)(?:.*?(?:de|por)\s+([^.]+?))?(?:\.|$)/i,
         extract: (m) => {
-          let sender = m[2];
-          if (!sender && m.input) {
-            const beforeMatch = m.input.match(/^([^.]+?)\s+te\s+enviou/i);
-            if (beforeMatch) sender = beforeMatch[1];
+          let place = m[2];
+          const emMatch = place.match(/(?:em|no|na)\s+([^.]+?)$/i);
+          if (emMatch) {
+            place = emMatch[1];
           }
+          place = place.replace(/^cart[aã]o(?:\s+[A-Za-z0-9]+)?\s+(?:em|no|na)\s+/i, '');
           return {
             amount: parseBRLAmount(m[1]),
-            targetOrSource: cleanName(sender || 'Transferência Nubank'),
+            targetOrSource: cleanName(place),
           };
         },
       },
@@ -98,6 +106,16 @@ export const BANK_RULES: BankRule[] = [
     color: '#FBF800',
     packages: ['br.com.bb.android', 'bancodobrasil'],
     patterns: [
+      // Pix Recebido: "BB: Pix recebido no valor de R$ 200,00 de Marina Souza."
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /(?:recebido|recebeu).*?(?:valor\s+de\s+)?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência BB'),
+        }),
+      },
       // Pix Enviado: "BB: Pix enviado no valor de R$ 120,00 para Carlos Alberto."
       {
         type: 'EXPENSE',
@@ -118,16 +136,6 @@ export const BANK_RULES: BankRule[] = [
           targetOrSource: cleanName(m[2]),
         }),
       },
-      // Pix Recebido: "BB: Pix recebido no valor de R$ 200,00 de Marina Souza."
-      {
-        type: 'INCOME',
-        method: 'Pix',
-        regex: /Pix\s+recebido.*?(?:valor\s+de\s+)?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
-        extract: (m) => ({
-          amount: parseBRLAmount(m[1]),
-          targetOrSource: cleanName(m[2] || 'Transferência BB'),
-        }),
-      },
     ],
   },
 
@@ -137,6 +145,16 @@ export const BANK_RULES: BankRule[] = [
     color: '#005CA9',
     packages: ['br.com.gabba.Caixa', 'br.gov.caixa.tem'],
     patterns: [
+      // Pix Recebido: "CAIXA: Pix recebido no valor de R$ 300,00 de Empresa XYZ."
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /(?:recebido|recebeu).*?(?:valor\s+de\s+)?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência Caixa'),
+        }),
+      },
       // Pix Enviado: "CAIXA: Transferencia Pix de R$ 50,00 realizada com sucesso para Drogaria Pacheco."
       {
         type: 'EXPENSE',
@@ -157,16 +175,6 @@ export const BANK_RULES: BankRule[] = [
           targetOrSource: cleanName(m[2]),
         }),
       },
-      // Pix Recebido: "CAIXA: Pix recebido no valor de R$ 300,00 de Empresa XYZ."
-      {
-        type: 'INCOME',
-        method: 'Pix',
-        regex: /Pix\s+recebido\s+no\s+valor\s+de\s+R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
-        extract: (m) => ({
-          amount: parseBRLAmount(m[1]),
-          targetOrSource: cleanName(m[2] || 'Transferência Caixa'),
-        }),
-      },
     ],
   },
 
@@ -176,6 +184,16 @@ export const BANK_RULES: BankRule[] = [
     color: '#CC092F',
     packages: ['com.bradesco', 'com.bradesco.cartoes'],
     patterns: [
+      // Pix Recebido: "Bradesco: Pix recebido no valor de R$ 45,00 de Rafael Lima."
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /(?:recebido|recebeu).*?(?:valor\s+de\s+)?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência Bradesco'),
+        }),
+      },
       // Pix Enviado: "Bradesco: Pix enviado no valor de R$ 75,00 para Marcos Silva."
       {
         type: 'EXPENSE',
@@ -196,16 +214,6 @@ export const BANK_RULES: BankRule[] = [
           targetOrSource: cleanName(m[2]),
         }),
       },
-      // Pix Recebido: "Bradesco: Pix recebido no valor de R$ 45,00 de Rafael Lima."
-      {
-        type: 'INCOME',
-        method: 'Pix',
-        regex: /Pix\s+recebido\s+no\s+valor\s+de\s+R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
-        extract: (m) => ({
-          amount: parseBRLAmount(m[1]),
-          targetOrSource: cleanName(m[2] || 'Transferência Bradesco'),
-        }),
-      },
     ],
   },
 
@@ -215,6 +223,16 @@ export const BANK_RULES: BankRule[] = [
     color: '#EC0000',
     packages: ['com.santander.app', 'com.santander.way'],
     patterns: [
+      // Pix Recebido: "Santander: Voce recebeu um Pix de R$ 500,00 de Joao Pedro."
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /recebeu.*?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência Santander'),
+        }),
+      },
       // Pix Enviado: "Santander: Pix enviado de R$ 85,00 para Maria Silva."
       {
         type: 'EXPENSE',
@@ -235,16 +253,6 @@ export const BANK_RULES: BankRule[] = [
           targetOrSource: cleanName(m[2]),
         }),
       },
-      // Pix Recebido: "Santander: Voce recebeu um Pix de R$ 500,00 de Joao Pedro."
-      {
-        type: 'INCOME',
-        method: 'Pix',
-        regex: /recebeu\s+um\s+Pix\s+de\s+R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
-        extract: (m) => ({
-          amount: parseBRLAmount(m[1]),
-          targetOrSource: cleanName(m[2] || 'Transferência Santander'),
-        }),
-      },
     ],
   },
 
@@ -254,6 +262,16 @@ export const BANK_RULES: BankRule[] = [
     color: '#FF7A00',
     packages: ['br.com.intermedium'],
     patterns: [
+      // Pix Recebido: "Inter: Voce recebeu um Pix de R$ 180,00 de Paula Oliveira."
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /recebeu.*?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência Inter'),
+        }),
+      },
       // Pix Enviado: "Inter: Pix de R$ 95,00 enviado para Jose Carlos."
       {
         type: 'EXPENSE',
@@ -274,16 +292,6 @@ export const BANK_RULES: BankRule[] = [
           targetOrSource: cleanName(m[2]),
         }),
       },
-      // Pix Recebido: "Inter: Voce recebeu um Pix de R$ 180,00 de Paula Oliveira."
-      {
-        type: 'INCOME',
-        method: 'Pix',
-        regex: /recebeu\s+um\s+Pix\s+de\s+R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
-        extract: (m) => ({
-          amount: parseBRLAmount(m[1]),
-          targetOrSource: cleanName(m[2] || 'Transferência Inter'),
-        }),
-      },
     ],
   },
 ];
@@ -295,9 +303,57 @@ function parseBRLAmount(str: string): number {
   return parseFloat(cleaned) || 0;
 }
 
+// ============================================================================
+// Helper de Formatação e Simplificação de Nomes de Pessoas e Estabelecimentos
+// ============================================================================
+export function simplifyPersonOrEntityName(rawName: string): string {
+  if (!rawName) return 'Transferência Bancária';
+
+  // Limpa pontuações e caracteres estranhos
+  let cleaned = rawName
+    .trim()
+    .replace(/[.,;:!?]+$/, '')
+    .replace(/^[:\s-]+/, '')
+    .trim();
+
+  // Remove sufixos como "no Pix", "via Pix", "pelo Pix", "com cartão"
+  cleaned = cleaned.replace(/\s+(?:no|via|pelo|com)\s+(?:Pix|cart[aã]o|cr[eé]dito|d[eé]bito).*$/i, '').trim();
+
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length <= 2) {
+    return cleaned;
+  }
+
+  // Prefixos comerciais conhecidos (manter até 3 palavras se fizer sentido)
+  const businessPrefixes = [
+    'padaria', 'supermercado', 'drogaria', 'farmacia', 'farmácia',
+    'mercado', 'posto', 'restaurante', 'bar', 'lanchonete', 'loja',
+    'auto', 'hotel', 'pousada', 'clinica', 'clínica', 'hospital'
+  ];
+
+  if (businessPrefixes.includes(words[0].toLowerCase())) {
+    return words.slice(0, 3).join(' ');
+  }
+
+  // Preposições comuns em nomes em português
+  const prepositions = ['de', 'da', 'do', 'dos', 'das', 'e'];
+  const firstWord = words[0];
+  const secondWord = words[1];
+
+  // Caso: "Maria de Souza" -> mantém preposição + próximo sobrenome
+  if (prepositions.includes(secondWord.toLowerCase()) && words.length >= 3) {
+    return `${firstWord} ${secondWord} ${words[2]}`;
+  }
+
+  // Caso padrão para pessoas físicas com múltiplos sobrenomes:
+  // "Letícia Lima de Lucena Viana" -> "Letícia Lima"
+  // "João Pedro da Silva Ramos" -> "João Pedro"
+  return `${firstWord} ${secondWord}`;
+}
+
 function cleanName(str: string): string {
-  if (!str) return 'Pagamento';
-  return str.trim().replace(/[.,;]+$/, '');
+  if (!str) return 'Transferência Bancária';
+  return simplifyPersonOrEntityName(str);
 }
 
 // ============================================================================
@@ -356,14 +412,14 @@ export function parseBankNotificationText(
   if (moneyMatch) {
     const amount = parseBRLAmount(moneyMatch[1]);
     if (amount > 0) {
-      const isIncome = /(?:recebeu|recebida|recebido|crédito|depositado|reembolso|te\s+enviou)/i.test(text);
+      const isIncome = /(?:recebeu|recebida|recebido|recebimento|cr[eé]dito\s+em\s+conta|depositado|dep[oó]sito|reembolso|te\s+enviou)/i.test(text);
       let targetOrSource = isIncome ? 'Transferência Recebida' : 'Transferência Enviada';
 
       if (isIncome) {
-        const fromMatch = text.match(/(?:de|de\s+parte\s+de|por)\s+([A-Za-zÀ-ÿ\s0-9]{2,35})/i);
+        const fromMatch = text.match(/\b(?:de|de\s+parte\s+de|por)\s+([A-Za-zÀ-ÿ\s0-9]{2,35})/i);
         if (fromMatch) targetOrSource = cleanName(fromMatch[1]);
       } else {
-        const toMatch = text.match(/(?:para|a|em|no|na)\s+([A-Za-zÀ-ÿ\s0-9]{2,35})/i);
+        const toMatch = text.match(/\b(?:para|a|em|no|na)\s+([A-Za-zÀ-ÿ\s0-9]{2,35})/i);
         if (toMatch) targetOrSource = cleanName(toMatch[1]);
       }
 
@@ -410,7 +466,33 @@ export function getStoredNotifications(): BankNotification[] {
     if (!raw) {
       return [];
     }
-    return JSON.parse(raw);
+    const list: BankNotification[] = JSON.parse(raw);
+    let updated = false;
+    const sanitized = list.map((item) => {
+      // Auto-correção caso haja notificações no histórico com tipo ou nome desatualizado:
+      if (item.rawText && /(?:recebeu|recebida|recebido|te\s+enviou)/i.test(item.rawText)) {
+        if (item.type !== 'INCOME' || item.targetOrSource.toLowerCase().includes('lima de lucena')) {
+          const reParsed = parseBankNotificationText(item.rawText, item.bank, item.date, item.time);
+          if (reParsed) {
+            updated = true;
+            return {
+              ...item,
+              type: 'INCOME' as const,
+              targetOrSource: reParsed.targetOrSource,
+              paymentMethod: reParsed.paymentMethod,
+              amount: reParsed.amount,
+              formattedAmount: reParsed.formattedAmount,
+            };
+          }
+        }
+      }
+      return item;
+    });
+
+    if (updated) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
+    }
+    return sanitized;
   } catch {
     return [];
   }
@@ -654,13 +736,24 @@ export function processIncomingAndroidNotificationItems(items: any[]) {
 
     if (existingIndex >= 0) {
       const existing = current[existingIndex];
-      // Se a notificação foi dispensada anteriormente, mas continua ativa na bandeja do celular
-      // ou foi reescaneada no botão de atualizar, restaura para PENDING para permitir conciliar!
-      if (existing.status === 'DISMISSED') {
+      const needsCorrection =
+        existing.type !== notif.type ||
+        existing.targetOrSource !== notif.targetOrSource ||
+        Math.abs(existing.amount - notif.amount) > 0.001;
+
+      // Se a notificação foi dispensada anteriormente ou seus detalhes foram corrigidos (ex: tipo INCOME ou nome limpo)
+      if (existing.status === 'DISMISSED' || needsCorrection) {
         current[existingIndex] = {
           ...existing,
-          status: 'PENDING',
-          dismissedAt: undefined,
+          bank: notif.bank,
+          bankColor: notif.bankColor,
+          type: notif.type,
+          amount: notif.amount,
+          formattedAmount: notif.formattedAmount,
+          targetOrSource: notif.targetOrSource,
+          paymentMethod: notif.paymentMethod,
+          status: existing.status === 'DISMISSED' ? 'PENDING' : existing.status,
+          dismissedAt: existing.status === 'DISMISSED' ? undefined : existing.dismissedAt,
         };
         changed = true;
       }

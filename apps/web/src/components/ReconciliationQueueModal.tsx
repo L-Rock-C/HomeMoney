@@ -93,13 +93,27 @@ export function ReconciliationQueueModal({
     if (currentItem) {
       setError(null);
       setType(currentItem.type === 'INCOME' ? 'INCOME' : 'EXPENSE');
-      setDescription(
-        currentItem.type === 'INCOME'
-          ? `Recebimento de ${currentItem.targetOrSource}`
-          : currentItem.paymentMethod === 'Pix'
-          ? `Pix para ${currentItem.targetOrSource}`
-          : `Compra em ${currentItem.targetOrSource}`
-      );
+      let autoDesc = '';
+      if (currentItem.type === 'INCOME') {
+        if (currentItem.paymentMethod === 'Pix' || /pix|transfer[eê]ncia/i.test(currentItem.rawText)) {
+          autoDesc = `Pix de ${currentItem.targetOrSource}`;
+        } else {
+          autoDesc = `Recebimento de ${currentItem.targetOrSource}`;
+        }
+      } else {
+        if (currentItem.paymentMethod === 'Pix' || /pix/i.test(currentItem.rawText)) {
+          autoDesc = `Pix para ${currentItem.targetOrSource}`;
+        } else if (
+          currentItem.paymentMethod === 'Crédito' ||
+          currentItem.paymentMethod === 'Débito' ||
+          /compra|cart[aã]o/i.test(currentItem.rawText)
+        ) {
+          autoDesc = `Compra em ${currentItem.targetOrSource}`;
+        } else {
+          autoDesc = `Pagamento a ${currentItem.targetOrSource}`;
+        }
+      }
+      setDescription(autoDesc);
       setAmount(currentItem.formattedAmount);
       setPurchaseDate(currentItem.date);
       setDueDate(currentItem.date);
@@ -111,21 +125,39 @@ export function ReconciliationQueueModal({
       );
 
       // Tenta associar carteira correspondente ao banco
-      const matchedAccount = accounts.find((a) =>
-        a.name.toLowerCase().includes(currentItem.bank.toLowerCase())
-      );
+      const matchedAccount = accounts.find((a) => {
+        const accLower = a.name.toLowerCase();
+        const bankLower = currentItem.bank.toLowerCase();
+        return (
+          accLower.includes(bankLower) ||
+          (bankLower === 'nubank' && (accLower.includes('nu') || accLower.includes('roxo'))) ||
+          (bankLower === 'bb' && (accLower.includes('brasil') || accLower.includes('bb'))) ||
+          (bankLower === 'caixa' && accLower.includes('caixa')) ||
+          (bankLower === 'bradesco' && accLower.includes('bradesco')) ||
+          (bankLower === 'santander' && accLower.includes('santander')) ||
+          (bankLower === 'inter' && accLower.includes('inter'))
+        );
+      });
       setAccountId(matchedAccount ? matchedAccount.id : accounts[0]?.id || '');
 
-      // Tenta associar categoria inicial
+      // Tenta associar categoria inicial adequada
       const matchingCategory = categories.find((c) =>
-        currentItem.type === 'INCOME' ? c.isIncome : !c.isIncome
-      );
+        currentItem.type === 'INCOME'
+          ? c.isIncome &&
+            (c.name.toLowerCase().includes('pix') ||
+              c.name.toLowerCase().includes('transferência') ||
+              c.name.toLowerCase().includes('receita') ||
+              c.name.toLowerCase().includes('outros'))
+          : !c.isIncome
+      ) || categories.find((c) => (currentItem.type === 'INCOME' ? c.isIncome : !c.isIncome));
       setCategoryId(matchingCategory ? matchingCategory.id : categories[0]?.id || '');
 
       // Tenta achar pessoa se for contato existente
-      const matchedPerson = people.find((p) =>
-        currentItem.targetOrSource.toLowerCase().includes(p.name.toLowerCase())
-      );
+      const targetLower = currentItem.targetOrSource.toLowerCase();
+      const matchedPerson = people.find((p) => {
+        const personLower = p.name.toLowerCase();
+        return targetLower.includes(personLower) || personLower.includes(targetLower);
+      });
       setPersonId(matchedPerson ? matchedPerson.id : '');
     }
   }, [currentIndex, currentItem, accounts, categories, people]);
