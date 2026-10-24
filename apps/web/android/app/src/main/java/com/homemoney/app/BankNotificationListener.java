@@ -1,13 +1,20 @@
 package com.homemoney.app;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
+
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -21,6 +28,8 @@ public class BankNotificationListener extends NotificationListenerService {
     private static final String TAG = "BankNotifListener";
     public static final String PREFS_NAME = "HomeMoneyNotifications";
     public static final String KEY_PENDING = "pending_notifications";
+    public static final String KEY_DISMISSED = "dismissed_notifications";
+    public static final String CHANNEL_ID = "homemoney_bank_suggestions";
 
     public static volatile BankNotificationListener instance;
 
@@ -59,7 +68,7 @@ public class BankNotificationListener extends NotificationListenerService {
         if (sbn == null || sbn.getNotification() == null) return;
 
         String packageName = sbn.getPackageName();
-        if (packageName == null) return;
+        if (packageName == null || packageName.equals(getPackageName())) return;
 
         String pkgLower = packageName.toLowerCase();
 
@@ -141,8 +150,9 @@ public class BankNotificationListener extends NotificationListenerService {
             SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
             Date now = new Date();
 
+            String notifId = "android_" + System.currentTimeMillis() + "_" + matchedBank.toLowerCase();
             JSONObject notifObj = new JSONObject();
-            notifObj.put("id", "android_" + System.currentTimeMillis() + "_" + matchedBank.toLowerCase());
+            notifObj.put("id", notifId);
             notifObj.put("bank", matchedBank);
             notifObj.put("title", title);
             notifObj.put("text", text);
@@ -170,6 +180,9 @@ public class BankNotificationListener extends NotificationListenerService {
                 prefs.edit().putString(KEY_PENDING, array.toString()).apply();
                 Log.d(TAG, "Notificação persistida no SharedPreferences com sucesso!");
 
+                // Lança notificação nativa sugerindo o registro imediato
+                postSuggestionNotification(matchedBank, title, text, notifId);
+
                 // Notifica MainActivity caso o app esteja aberto em primeiro plano
                 try {
                     Intent broadcast = new Intent("com.homemoney.app.NOTIFICATION_RECEIVED");
@@ -180,6 +193,106 @@ public class BankNotificationListener extends NotificationListenerService {
 
         } catch (Exception e) {
             Log.e(TAG, "Erro ao processar notificação bancária", e);
+        }
+    }
+
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                if (manager != null) {
+                    NotificationChannel existingChannel = manager.getNotificationChannel(CHANNEL_ID);
+                    if (existingChannel == null) {
+                        NotificationChannel channel = new NotificationChannel(
+                            CHANNEL_ID,
+                            "Sugestões de Transferência",
+                            NotificationManager.IMPORTANCE_HIGH
+                        );
+                        channel.setDescription("Sugestões automáticas para registrar transações bancárias no HomeMoney");
+                        channel.enableLights(true);
+                        channel.enableVibration(true);
+                        channel.setShowBadge(true);
+                        manager.createNotificationChannel(channel);
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Erro ao criar NotificationChannel", e);
+            }
+        }
+    }
+
+    private void postSuggestionNotification(String bank, String title, String text, String notifId) {
+        try {
+            createNotificationChannel();
+
+            int notifIntId = Math.abs(notifId.hashCode());
+
+            // Ação 1: Registrar Agora (Abre o HomeMoney na fila/modal de conciliação)
+            Intent openIntent = new Intent(this, MainActivity.class);
+            openIntent.setAction("OPEN_RECONCILIATION");
+            openIntent.putExtra("notification_id", notifId);
+            openIntent.putExtra("notification_int_id", notifIntId);
+            openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+            PendingIntent openPendingIntent = PendingIntent.getActivity(
+                this,
+                notifIntId,
+                openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            // Ação 2: Dispensar (Cancela notificação da barra e arquiva nas dispensadas)
+            Intent dismissIntent = new Intent(this, NotificationActionReceiver.class);
+            dismissIntent.setAction("DISMISS_NOTIFICATION");
+            dismissIntent.putExtra("notification_id", notifId);
+            dismissIntent.putExtra("notification_int_id", notifIntId);
+            dismissIntent.putExtra("bank", bank);
+            dismissIntent.putExtra("title", title);
+            dismissIntent.putExtra("text", text);
+
+            PendingIntent dismissPendingIntent = PendingIntent.getBroadcast(
+                this,
+                notifIntId + 1,
+                dismissIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            int appIcon = getApplicationInfo().icon;
+            if (appIcon == 0) {
+                appIcon = R.mipmap.ic_launcher;
+            }
+
+            String notifTitle = "💰 " + bank + " • Registrar Transferência?";
+            String contentText = !text.isEmpty() ? text : title;
+
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(appIcon)
+                .setContentTitle(notifTitle)
+                .setContentText(contentText)
+                .setStyle(new NotificationCompat.BigTextStyle()
+                    .bigText(contentText)
+                    .setSummaryText("HomeMoney • Conciliação"))
+                .setContentIntent(openPendingIntent)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .addAction(new NotificationCompat.Action(
+                    0,
+                    "✅ Registrar Agora",
+                    openPendingIntent
+                ))
+                .addAction(new NotificationCompat.Action(
+                    0,
+                    "✖ Dispensar",
+                    dismissPendingIntent
+                ));
+
+            NotificationManagerCompat.from(this).notify(notifIntId, builder.build());
+            Log.d(TAG, "Notificação de sugestão emitida com sucesso! ID: " + notifIntId);
+
+        } catch (Exception e) {
+            Log.e(TAG, "Erro ao disparar notificação nativa de sugestão", e);
         }
     }
 }

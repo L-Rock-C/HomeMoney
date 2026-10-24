@@ -522,6 +522,27 @@ export function triggerAndroidNotificationCheck(): boolean {
   return false;
 }
 
+export function checkAndroidPendingReconciliation(): boolean {
+  if (typeof window !== 'undefined' && (window as any).AndroidNotificationBridge) {
+    try {
+      if (typeof (window as any).AndroidNotificationBridge.consumePendingOpenReconciliation === 'function') {
+        return Boolean((window as any).AndroidNotificationBridge.consumePendingOpenReconciliation());
+      }
+    } catch {}
+  }
+  return false;
+}
+
+export function requestAndroidNotificationPermission(): void {
+  if (typeof window !== 'undefined' && (window as any).AndroidNotificationBridge) {
+    try {
+      if (typeof (window as any).AndroidNotificationBridge.requestPostNotificationPermission === 'function') {
+        (window as any).AndroidNotificationBridge.requestPostNotificationPermission();
+      }
+    } catch {}
+  }
+}
+
 // ============================================================================
 // Ouvinte do Evento Nativo do Android (Capacitor Bridge)
 // ============================================================================
@@ -567,5 +588,51 @@ if (typeof window !== 'undefined') {
       console.error('Erro ao processar notificações do Android:', err);
     }
   });
+
+  window.addEventListener('homemoney_android_dismissed_notifications', (e: any) => {
+    try {
+      const raw = e.detail;
+      const parsedArray = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (Array.isArray(parsedArray)) {
+        for (const item of parsedArray) {
+          const text = item.text || '';
+          const title = item.title || '';
+          const fullText = title ? `${title}: ${text}` : text;
+
+          const parsed =
+            parseBankNotificationText(
+              text,
+              item.bank as BankNotification['bank'],
+              item.date,
+              item.time
+            ) ||
+            parseBankNotificationText(
+              fullText,
+              item.bank as BankNotification['bank'],
+              item.date,
+              item.time
+            );
+
+          if (parsed) {
+            const current = getStoredNotifications();
+            const exists = current.find(
+              (n) => n.rawText === parsed.rawText && n.date === parsed.date && Math.abs(n.amount - parsed.amount) < 0.01
+            );
+            if (exists) {
+              dismissNotification(exists.id);
+            } else {
+              parsed.status = 'DISMISSED';
+              parsed.dismissedAt = new Date().toISOString();
+              saveStoredNotifications([parsed, ...current]);
+            }
+          }
+        }
+        window.dispatchEvent(new Event('homemoney_queue_updated'));
+      }
+    } catch (err) {
+      console.error('Erro ao processar notificações dispensadas do Android:', err);
+    }
+  });
 }
+
 

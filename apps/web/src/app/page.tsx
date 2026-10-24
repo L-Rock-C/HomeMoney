@@ -67,6 +67,7 @@ import {
   getPendingQueue,
   getDismissedHistory,
   triggerAndroidNotificationCheck,
+  checkAndroidPendingReconciliation,
 } from '../lib/bankNotificationService';
 
 const getCurrentMonthKey = () => {
@@ -158,6 +159,28 @@ export default function HomePage() {
 
   useEffect(() => {
     refreshQueueData();
+
+    // Se o aplicativo foi aberto a partir de um clique em "Registrar Agora" na notificação nativa
+    if (checkAndroidPendingReconciliation()) {
+      setIsQueueModalOpen(true);
+    }
+
+    const handleOpenReconcile = () => {
+      refreshQueueData();
+      setIsQueueModalOpen(true);
+    };
+
+    const handleQueueUpdated = () => {
+      refreshQueueData();
+    };
+
+    window.addEventListener('homemoney_open_reconciliation', handleOpenReconcile);
+    window.addEventListener('homemoney_queue_updated', handleQueueUpdated);
+
+    return () => {
+      window.removeEventListener('homemoney_open_reconciliation', handleOpenReconcile);
+      window.removeEventListener('homemoney_queue_updated', handleQueueUpdated);
+    };
   }, []);
 
   // Initialize theme and authenticate user
