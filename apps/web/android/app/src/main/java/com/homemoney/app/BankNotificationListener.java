@@ -312,7 +312,7 @@ public class BankNotificationListener extends NotificationListenerService {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .addAction(new NotificationCompat.Action(
                     0,
-                    "✅ Conciliar",
+                    "✅ Registrar Agora",
                     openPendingIntent
                 ))
                 .addAction(new NotificationCompat.Action(

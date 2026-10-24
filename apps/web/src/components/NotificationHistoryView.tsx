@@ -109,7 +109,7 @@ export function NotificationHistoryView({
             className="px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/20 transition flex items-center gap-2 self-start sm:self-auto cursor-pointer"
           >
             <Sparkles className="w-4 h-4" />
-            Conciliar Fila ({pendingList.length})
+            Registrar Agora ({pendingList.length})
           </button>
         )}
       </div>
@@ -260,7 +260,7 @@ export function NotificationHistoryView({
               onClick={onOpenReconciliation}
               className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
-              Abrir Conciliação <ChevronRight className="w-3.5 h-3.5" />
+              Registrar Agora <ChevronRight className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
@@ -367,7 +367,7 @@ export function NotificationHistoryView({
                           className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
-                          Conciliar
+                          Registrar Agora
                         </button>
                       </>
                     )}

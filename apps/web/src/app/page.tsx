@@ -901,7 +901,7 @@ export default function HomePage() {
                   }}
                   className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-md shadow-emerald-500/25 transition flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <Sparkles className="w-4 h-4" /> Conciliar Fila ({pendingQueue.length})
+                  <Sparkles className="w-4 h-4" /> Registrar Agora ({pendingQueue.length})
                 </button>
               </div>
             </div>
