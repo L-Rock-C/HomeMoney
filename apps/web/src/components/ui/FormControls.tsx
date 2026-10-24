@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Check, ChevronDown, AlertCircle } from 'lucide-react';
 
 // ============================================================================
@@ -285,76 +285,236 @@ export function SwitchToggle({
 }
 
 // ============================================================================
-// 5. Select Dropdown (wrapper com chevron personalizado e bordas suaves)
+// 5. Custom Select Dropdown (100% customizado, identidade visual única mobile & desktop)
 // ============================================================================
-export interface SelectDropdownProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectOption {
+  value: string;
+  label: React.ReactNode;
+  disabled?: boolean;
+}
+
+export interface SelectDropdownProps {
   label?: string;
   helperText?: string;
   error?: string;
   leftIcon?: React.ReactNode;
   badge?: string;
-  children: React.ReactNode;
+  placeholder?: string;
+  disabled?: boolean;
+  required?: boolean;
+  className?: string;
+  id?: string;
+  name?: string;
+  value?: string | number;
+  options?: SelectOption[];
+  children?: React.ReactNode;
+  onChange?: (e: { target: { value: string; name?: string } }) => void;
 }
 
-export const SelectDropdown = React.forwardRef<HTMLSelectElement, SelectDropdownProps>(
-  ({ label, helperText, error, leftIcon, badge, children, className = '', id, ...props }, ref) => {
+function extractOptionsFromChildren(children: React.ReactNode): SelectOption[] {
+  const options: SelectOption[] = [];
+
+  React.Children.forEach(children, (child) => {
+    if (!child) return;
+
+    if (React.isValidElement(child)) {
+      if (child.type === React.Fragment) {
+        options.push(...extractOptionsFromChildren((child.props as any).children));
+        return;
+      }
+
+      const props = child.props as any;
+      if (props) {
+        options.push({
+          value: props.value !== undefined ? String(props.value) : String(props.children || ''),
+          label: props.children,
+          disabled: props.disabled,
+        });
+      }
+    }
+  });
+
+  return options;
+}
+
+export const SelectDropdown = React.forwardRef<HTMLButtonElement, SelectDropdownProps>(
+  (
+    {
+      label,
+      helperText,
+      error,
+      leftIcon,
+      badge,
+      placeholder = 'Selecione uma opção...',
+      disabled = false,
+      required = false,
+      className = '',
+      id,
+      name,
+      value,
+      options,
+      children,
+      onChange,
+    },
+    ref
+  ) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
     const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
 
+    const allOptions = options || extractOptionsFromChildren(children);
+    const stringValue = value !== undefined ? String(value) : '';
+    const selectedOption = allOptions.find((o) => o.value === stringValue);
+
+    // Fecha ao clicar fora ou pressionar Escape
+    useEffect(() => {
+      if (!isOpen) return;
+
+      function handleClickOutside(event: MouseEvent | TouchEvent) {
+        if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+          setIsOpen(false);
+        }
+      }
+
+      function handleKeyDown(event: KeyboardEvent) {
+        if (event.key === 'Escape') {
+          setIsOpen(false);
+        }
+      }
+
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('touchstart', handleClickOutside);
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }, [isOpen]);
+
+    function handleSelect(optionValue: string) {
+      if (disabled) return;
+      setIsOpen(false);
+      if (onChange) {
+        onChange({
+          target: { value: optionValue, name },
+        });
+      }
+    }
+
     return (
-      <div className="w-full space-y-1.5 text-left">
+      <div ref={containerRef} className="relative w-full space-y-1.5 text-left font-sans">
         {label && (
           <div className="flex items-center justify-between">
-            <label htmlFor={selectId} className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <label htmlFor={selectId} className="block text-xs font-semibold text-slate-700 dark:text-slate-300 font-sans">
               {label}
-              {props.required && <span className="text-rose-500 ml-0.5">*</span>}
+              {required && <span className="text-rose-500 ml-0.5">*</span>}
             </label>
             {badge && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-sans">
                 {badge}
               </span>
             )}
           </div>
         )}
 
-        <div
-          className={`relative flex items-center rounded-xl border bg-slate-50/70 dark:bg-slate-950/70 transition-all duration-200
+        {/* Input oculto para formulários padrão */}
+        <input type="hidden" name={name} value={stringValue} />
+
+        {/* Botão de Trigger Customizado */}
+        <button
+          ref={ref}
+          type="button"
+          id={selectId}
+          disabled={disabled}
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          className={`w-full flex items-center justify-between rounded-xl border bg-slate-50/70 dark:bg-slate-950/70 px-3.5 py-2.5 text-sm font-sans font-medium transition-all duration-200 cursor-pointer select-none text-left
             ${
               error
                 ? 'border-rose-500/80 ring-2 ring-rose-500/20'
-                : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 focus-within:border-emerald-500 dark:focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-500/20 dark:focus-within:ring-emerald-400/20'
+                : isOpen
+                ? 'border-emerald-500 ring-2 ring-emerald-500/20 text-slate-900 dark:text-white'
+                : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-900 dark:text-white'
             }
+            ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : ''}
+            ${className}
           `}
         >
-          {leftIcon && (
-            <div className="pl-3.5 pr-1 text-slate-400 dark:text-slate-500 pointer-events-none flex items-center justify-center">
-              {leftIcon}
-            </div>
-          )}
-
-          <select
-            ref={ref}
-            id={selectId}
-            className={`w-full bg-transparent px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none appearance-none cursor-pointer transition-colors
-              ${leftIcon ? 'pl-2' : ''}
-              pr-9 ${className}
-            `}
-            {...props}
-          >
-            {children}
-          </select>
-
-          <div className="absolute right-3.5 pointer-events-none text-slate-400 dark:text-slate-500">
-            <ChevronDown className="w-4 h-4" />
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
+            {leftIcon && (
+              <div className="text-slate-400 dark:text-slate-500 shrink-0 flex items-center justify-center">
+                {leftIcon}
+              </div>
+            )}
+            <span className="truncate block font-sans">
+              {selectedOption ? (
+                selectedOption.label
+              ) : (
+                <span className="text-slate-400 dark:text-slate-500 font-sans">{placeholder}</span>
+              )}
+            </span>
           </div>
-        </div>
+
+          <ChevronDown
+            className={`w-4 h-4 text-slate-400 dark:text-slate-500 shrink-0 transition-transform duration-200 ${
+              isOpen ? 'rotate-180 text-emerald-500' : ''
+            }`}
+          />
+        </button>
+
+        {/* Dropdown Menu Popover Customizado */}
+        {isOpen && (
+          <div
+            role="listbox"
+            className="absolute left-0 right-0 z-[70] mt-1.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md"
+          >
+            {allOptions.length === 0 ? (
+              <div className="px-3.5 py-2.5 text-xs text-slate-400 text-center font-sans">
+                Nenhuma opção disponível
+              </div>
+            ) : (
+              allOptions.map((option) => {
+                const isSelected = option.value === stringValue;
+                return (
+                  <div
+                    key={option.value}
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => {
+                      if (option.disabled) return;
+                      handleSelect(option.value);
+                    }}
+                    className={`px-3.5 py-2.5 text-xs sm:text-sm font-sans transition-colors flex items-center justify-between cursor-pointer select-none
+                      ${
+                        option.disabled
+                          ? 'opacity-40 cursor-not-allowed text-slate-400'
+                          : isSelected
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold'
+                          : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-950 dark:hover:text-white'
+                      }
+                    `}
+                  >
+                    <span className="truncate flex-1 font-sans">{option.label}</span>
+                    {isSelected && (
+                      <Check className="w-4 h-4 text-emerald-500 shrink-0 ml-2" />
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
 
         {error ? (
-          <p className="text-xs text-rose-500 flex items-center gap-1 font-medium">
+          <p className="text-xs text-rose-500 flex items-center gap-1 font-medium font-sans">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             {error}
           </p>
         ) : helperText ? (
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight">{helperText}</p>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight font-sans">{helperText}</p>
         ) : null}
       </div>
     );

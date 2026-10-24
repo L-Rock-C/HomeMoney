@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, HandCoins, CheckCircle2, Calendar, CheckSquare, Square, AlertCircle, ArrowRight } from 'lucide-react';
 import { settleDebt, fetchPersonPendingTransactions } from '../lib/api';
+import { SelectDropdown } from './ui/FormControls';
 
 interface SettleModalProps {
   isOpen: boolean;
@@ -304,20 +305,17 @@ export function SettleModal({ isOpen, onClose, onSuccess, person, accounts }: Se
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-200 dark:border-slate-800/80">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Conta/Carteira que recebeu o dinheiro
-                </label>
-                <select
+                <SelectDropdown
+                  label="Conta/Carteira que recebeu o dinheiro"
                   value={accountId}
                   onChange={(e) => setAccountId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white text-xs focus:outline-none focus:border-emerald-500 cursor-pointer"
                 >
                   {accounts.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.name} ({a.type === 'SAVINGS' ? 'Poupança' : a.type === 'CHECKING' ? 'Principal' : 'Carteira'})
                     </option>
                   ))}
-                </select>
+                </SelectDropdown>
               </div>
 
               <div>

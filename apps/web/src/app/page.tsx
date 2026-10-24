@@ -66,6 +66,7 @@ import { NotificationHistoryModal } from '../components/NotificationHistoryModal
 import { NotificationHistoryView } from '../components/NotificationHistoryView';
 import { ProfileContactsView } from '../components/ProfileContactsView';
 import { CategoryDonutChart, MonthlyBarChart } from '../components/FinanceCharts';
+import { SelectDropdown } from '../components/ui/FormControls';
 import {
   BankNotification,
   getPendingQueue,
@@ -80,6 +81,51 @@ const getCurrentMonthKey = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 };
+
+// ============================================================================
+// Local Persistence Cache (Stale-While-Revalidate para inicialização instantânea)
+// ============================================================================
+const CACHE_KEY = 'homemoney_app_cache_v1';
+
+interface AppCacheData {
+  monthlyReports: any[];
+  accounts: any[];
+  categories: any[];
+  people: any[];
+  paymentMethods: any[];
+  transactions: any[];
+  categoriesReport: any;
+  availableMonths: string[];
+  selectedMonth: string;
+  cachedAt: number;
+}
+
+function getStoredAppCache(): AppCacheData | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function saveAppCache(data: Omit<AppCacheData, 'cachedAt'>) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ...data, cachedAt: Date.now() }));
+  } catch (e) {
+    console.warn('Erro ao salvar cache local:', e);
+  }
+}
+
+function clearAppCache() {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(CACHE_KEY);
+  } catch {}
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -208,7 +254,7 @@ export default function HomePage() {
     };
   }, []);
 
-  // Initialize theme and authenticate user
+  // Initialize theme, authenticate user and hydrate cache immediately
   useEffect(() => {
     const savedTheme = localStorage.getItem('homemoney-theme') as 'light' | 'dark' | null;
     const initialTheme = savedTheme || 'light';
@@ -217,6 +263,23 @@ export default function HomePage() {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
+    }
+
+    // 1. Tenta hidratar o estado a partir do cache local imediatamente (0ms)
+    const cached = getStoredAppCache();
+    if (cached) {
+      if (cached.monthlyReports?.length) setMonthlyReports(cached.monthlyReports);
+      if (cached.accounts?.length) setAccounts(cached.accounts);
+      if (cached.categories?.length) setCategories(cached.categories);
+      if (cached.people?.length) setPeople(cached.people);
+      if (cached.paymentMethods?.length) setPaymentMethods(cached.paymentMethods);
+      if (cached.transactions?.length) setTransactions(cached.transactions);
+      if (cached.categoriesReport) setCategoriesReport(cached.categoriesReport);
+      if (cached.availableMonths?.length) setAvailableMonths(cached.availableMonths);
+      if (cached.selectedMonth) setSelectedMonth(cached.selectedMonth);
+
+      // Desliga o loading imediatamente se houver dados em cache
+      setLoading(false);
     }
 
     const token = getAuthToken();
@@ -235,13 +298,18 @@ export default function HomePage() {
         setCurrentUser(u);
       } else {
         clearAuthToken();
+        clearAppCache();
         router.push('/login');
       }
     });
+
+    // 2. Busca dados frescos da rede (em segundo plano se já houver cache; com loading se não houver)
+    loadInitialData(!cached);
   }, [router]);
 
   const handleLogout = () => {
     clearAuthToken();
+    clearAppCache();
     setCurrentUser(null);
     setMonthlyReports([]);
     setCategoriesReport({ grandTotal: 0, categories: [] });
@@ -265,10 +333,10 @@ export default function HomePage() {
     }
   }
 
-  // Load Initial Data
-  async function loadInitialData() {
+  // Load Initial Data (com persistência em cache)
+  async function loadInitialData(showLoading = false) {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const [monthsData, accs, cats, peop, methods] = await Promise.all([
         fetchMonthlyReports(),
         fetchAccounts(),
@@ -291,7 +359,20 @@ export default function HomePage() {
       const initialMonth = currentM;
       setSelectedMonth(initialMonth);
 
-      await fetchTransactionsForFilter(initialMonth, '', '');
+      const filterResult = await fetchTransactionsForFilter(initialMonth, '', '');
+
+      // Persiste no cache local para carregamento instantâneo nas próximas aberturas
+      saveAppCache({
+        monthlyReports: monthsData,
+        accounts: accs,
+        categories: cats,
+        people: peop,
+        paymentMethods: methods,
+        transactions: filterResult?.trans || [],
+        categoriesReport: filterResult?.catRep || { grandTotal: 0, categories: [] },
+        availableMonths: allMonths,
+        selectedMonth: initialMonth,
+      });
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
     } finally {
@@ -309,6 +390,7 @@ export default function HomePage() {
         ]);
         setCategoriesReport(catRep);
         setTransactions(trans);
+        return { catRep, trans };
       } else {
         const trans = await fetchTransactions({
           startDate: start || undefined,
@@ -335,19 +417,15 @@ export default function HomePage() {
             percentage: grand > 0 ? Math.round((c.total / grand) * 1000) / 10 : 0,
           }))
           .sort((a, b) => b.total - a.total);
-        setCategoriesReport({ grandTotal: grand, categories: cats });
+        const catRep = { grandTotal: grand, categories: cats };
+        setCategoriesReport(catRep);
+        return { catRep, trans };
       }
     } catch (err) {
       console.error(err);
+      return null;
     }
   }
-
-  useEffect(() => {
-    const token = getAuthToken();
-    if (token) {
-      loadInitialData();
-    }
-  }, []);
 
   async function handleMonthSelect(month: string) {
     setSelectedMonth(month);
@@ -431,6 +509,37 @@ export default function HomePage() {
 
   const formatBRL = (val: number) =>
     val?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00';
+
+  // Loading Screen caso não haja dados em cache para exibir
+  if (loading && accounts.length === 0 && transactions.length === 0 && monthlyReports.length === 0) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 select-none animate-in fade-in duration-200">
+        <div className="relative flex flex-col items-center max-w-sm w-full text-center space-y-6">
+          {/* Logo animado com glow esmeralda */}
+          <div className="relative">
+            <div className="absolute -inset-4 bg-emerald-500/20 rounded-full blur-xl animate-pulse" />
+            <div className="relative w-20 h-20 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl flex items-center justify-center">
+              <Wallet className="w-10 h-10 text-emerald-500 animate-pulse" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              HomeMoney
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Carregando seus dados financeiros...
+            </p>
+          </div>
+
+          {/* Barra de Progresso Suave */}
+          <div className="w-48 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+            <div className="h-full bg-emerald-500 rounded-full animate-pulse w-3/4" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex w-full max-w-full overflow-x-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200">
@@ -1324,18 +1433,20 @@ export default function HomePage() {
 
                 <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
                   {/* Filter by Carteira / Poupança */}
-                  <select
-                    value={accountFilter}
-                    onChange={(e) => setAccountFilter(e.target.value)}
-                    className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 font-medium focus:outline-none shadow-sm cursor-pointer"
-                  >
-                    <option value="ALL">Todas as Carteiras</option>
-                    {accounts.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="min-w-[180px]">
+                    <SelectDropdown
+                      value={accountFilter}
+                      onChange={(e) => setAccountFilter(e.target.value)}
+                      className="py-1.5 px-3 text-xs"
+                    >
+                      <option value="ALL">Todas as Carteiras</option>
+                      {accounts.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name}
+                        </option>
+                      ))}
+                    </SelectDropdown>
+                  </div>
 
                   {/* Filter by Type */}
                   <div className="flex items-center gap-1 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto max-w-full scrollbar-none">

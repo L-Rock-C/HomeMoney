@@ -426,7 +426,7 @@ export function TransactionModal({
                     <select
                       value={newAccountType}
                       onChange={(e) => setNewAccountType(e.target.value)}
-                      className="px-1.5 py-1 text-[11px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-700 dark:text-slate-300"
+                      className="px-2 py-1 text-xs font-sans bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500 cursor-pointer"
                     >
                       <option value="CHECKING">Principal</option>
                       <option value="SAVINGS">Poupança</option>
