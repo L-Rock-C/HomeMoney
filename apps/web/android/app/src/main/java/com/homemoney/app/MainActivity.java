@@ -70,19 +70,45 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    public void ensureListenerConnected() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                ComponentName cn = new ComponentName(this, BankNotificationListener.class);
+                PackageManager pm = getPackageManager();
+                pm.setComponentEnabledSetting(cn, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+                pm.setComponentEnabledSetting(cn, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
+                android.service.notification.NotificationListenerService.requestRebind(cn);
+            }
+        } catch (Exception ignored) {}
+    }
+
     @Override
     public void onResume() {
         super.onResume();
         setupNotificationBridge();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            try {
-                ComponentName cn = new ComponentName(this, BankNotificationListener.class);
-                android.service.notification.NotificationListenerService.requestRebind(cn);
-            } catch (Exception ignored) {}
-        }
+        ensureListenerConnected();
 
+        if (BankNotificationListener.instance != null) {
+            BankNotificationListener.instance.scanActiveNotifications(false);
+        }
         syncPendingBankNotifications();
+
+        try {
+            getWindow().getDecorView().postDelayed(() -> {
+                if (BankNotificationListener.instance != null) {
+                    BankNotificationListener.instance.scanActiveNotifications(false);
+                }
+                syncPendingBankNotifications();
+            }, 400);
+
+            getWindow().getDecorView().postDelayed(() -> {
+                if (BankNotificationListener.instance != null) {
+                    BankNotificationListener.instance.scanActiveNotifications(false);
+                }
+                syncPendingBankNotifications();
+            }, 1200);
+        } catch (Exception ignored) {}
 
         try {
             IntentFilter filter = new IntentFilter();
@@ -242,21 +268,48 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
+        public String getPendingNotificationsJson() {
+            try {
+                SharedPreferences prefs = context.getSharedPreferences(BankNotificationListener.PREFS_NAME, Context.MODE_PRIVATE);
+                String pending = prefs.getString(BankNotificationListener.KEY_PENDING, "[]");
+                prefs.edit().putString(BankNotificationListener.KEY_PENDING, "[]").apply();
+                return pending;
+            } catch (Exception e) {
+                return "[]";
+            }
+        }
+
+        @JavascriptInterface
         public void checkNotificationsNow() {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    try {
-                        ComponentName cn = new ComponentName(context, BankNotificationListener.class);
-                        android.service.notification.NotificationListenerService.requestRebind(cn);
-                    } catch (Exception ignored) {}
-                }
-                if (BankNotificationListener.instance != null) {
-                    BankNotificationListener.instance.scanActiveNotifications(false);
-                }
                 if (context instanceof MainActivity) {
-                    ((MainActivity) context).runOnUiThread(() -> {
-                        ((MainActivity) context).syncPendingBankNotifications();
-                    });
+                    MainActivity act = (MainActivity) context;
+                    act.ensureListenerConnected();
+
+                    if (BankNotificationListener.instance != null) {
+                        BankNotificationListener.instance.scanActiveNotifications(false);
+                    }
+                    act.runOnUiThread(() -> act.syncPendingBankNotifications());
+
+                    try {
+                        act.getWindow().getDecorView().postDelayed(() -> {
+                            if (BankNotificationListener.instance != null) {
+                                BankNotificationListener.instance.scanActiveNotifications(false);
+                            }
+                            act.syncPendingBankNotifications();
+                        }, 400);
+
+                        act.getWindow().getDecorView().postDelayed(() -> {
+                            if (BankNotificationListener.instance != null) {
+                                BankNotificationListener.instance.scanActiveNotifications(false);
+                            }
+                            act.syncPendingBankNotifications();
+                        }, 1000);
+                    } catch (Exception ignored) {}
+                } else {
+                    if (BankNotificationListener.instance != null) {
+                        BankNotificationListener.instance.scanActiveNotifications(false);
+                    }
                 }
             } catch (Exception ignored) {}
         }

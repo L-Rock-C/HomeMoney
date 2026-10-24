@@ -69,6 +69,8 @@ import {
   getDismissedHistory,
   triggerAndroidNotificationCheck,
   checkAndroidPendingReconciliation,
+  getAndroidBridgeStatus,
+  openAndroidNotificationSettings,
 } from '../lib/bankNotificationService';
 
 const getCurrentMonthKey = () => {
@@ -140,26 +142,43 @@ export default function HomePage() {
   };
 
   const handleCheckNotifications = () => {
+    const status = getAndroidBridgeStatus();
+    if (status.isAvailable && !status.isPermissionGranted) {
+      openAndroidNotificationSettings();
+      setCheckFeedback('Autorize o HomeMoney nas notificações');
+      setTimeout(() => setCheckFeedback(null), 4000);
+      return;
+    }
+
     setIsCheckingNotifications(true);
     triggerAndroidNotificationCheck();
 
-    // Sincroniza e lê a fila após disparo nativo
+    // Primeiro refresh rápido
+    setTimeout(() => {
+      refreshQueueData();
+    }, 350);
+
+    // Segundo refresh completo com feedback
     setTimeout(() => {
       refreshQueueData();
       setIsCheckingNotifications(false);
 
       const queue = getPendingQueue();
+      const dismissed = getDismissedHistory();
       if (queue.length > 0) {
         setCheckFeedback(`${queue.length} ${queue.length === 1 ? 'sugestão encontrada' : 'sugestões na fila'}`);
+      } else if (dismissed.length > 0) {
+        setCheckFeedback(`Fila atualizada (${dismissed.length} no histórico)`);
       } else {
         setCheckFeedback('Fila atualizada');
       }
       setTimeout(() => setCheckFeedback(null), 3000);
-    }, 700);
+    }, 950);
   };
 
   useEffect(() => {
     refreshQueueData();
+    triggerAndroidNotificationCheck();
 
     // Se o aplicativo foi aberto a partir de um clique em "Registrar Agora" na notificação nativa
     if (checkAndroidPendingReconciliation()) {

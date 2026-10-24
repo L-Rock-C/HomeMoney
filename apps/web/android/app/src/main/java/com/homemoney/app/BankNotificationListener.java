@@ -39,6 +39,12 @@ public class BankNotificationListener extends NotificationListenerService {
         super.onListenerConnected();
         instance = this;
         Log.d(TAG, "BankNotificationListener conectado com sucesso!");
+        scanActiveNotifications(false);
+        try {
+            Intent broadcast = new Intent("com.homemoney.app.NOTIFICATION_RECEIVED");
+            broadcast.setPackage(getPackageName());
+            sendBroadcast(broadcast);
+        } catch (Exception ignored) {}
     }
 
     @Override
@@ -65,13 +71,11 @@ public class BankNotificationListener extends NotificationListenerService {
     }
 
     public void scanActiveNotifications() {
-        // Ao clicar no botão de atualização dentro do app, NÃO dispara notificações pop-up no sistema
         scanActiveNotifications(false);
     }
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
-        // Quando uma notificação nova do banco chega do sistema, dispara notificação de sugestão nativa
         processNotification(sbn, true);
     }
 
@@ -89,13 +93,18 @@ public class BankNotificationListener extends NotificationListenerService {
             if (extras == null) return;
 
             CharSequence titleChar = extras.getCharSequence(Notification.EXTRA_TITLE);
+            CharSequence titleBigChar = extras.getCharSequence(Notification.EXTRA_TITLE_BIG);
             CharSequence textChar = extras.getCharSequence(Notification.EXTRA_TEXT);
             CharSequence bigTextChar = extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
             CharSequence subTextChar = extras.getCharSequence(Notification.EXTRA_SUB_TEXT);
+            CharSequence infoTextChar = extras.getCharSequence(Notification.EXTRA_INFO_TEXT);
 
             String title = titleChar != null ? titleChar.toString() : "";
-            String text = textChar != null ? textChar.toString() : "";
+            if (title.isEmpty() && titleBigChar != null) {
+                title = titleBigChar.toString();
+            }
 
+            String text = textChar != null ? textChar.toString() : "";
             if (bigTextChar != null && bigTextChar.length() > text.length()) {
                 text = bigTextChar.toString();
             }
@@ -118,6 +127,10 @@ public class BankNotificationListener extends NotificationListenerService {
                 text = subTextChar.toString();
             }
 
+            if (text.isEmpty() && infoTextChar != null) {
+                text = infoTextChar.toString();
+            }
+
             if (text.isEmpty() && notification.tickerText != null) {
                 text = notification.tickerText.toString();
             }
@@ -130,24 +143,32 @@ public class BankNotificationListener extends NotificationListenerService {
 
             String combinedLower = (title + " " + text + " " + pkgLower).toLowerCase();
 
-            // Identificação do banco (por pacote ou por menção no texto/título)
+            // Identificação robusta do banco (por pacote ou palavras-chave)
             String matchedBank = null;
-            if (pkgLower.contains("nu.production") || combinedLower.contains("nubank")) {
+            if (pkgLower.contains("nu.production") || pkgLower.contains("nubank") || combinedLower.contains("nubank")) {
                 matchedBank = "Nubank";
-            } else if (pkgLower.contains("bb.android") || combinedLower.contains("bancodobrasil") || combinedLower.contains("banco do brasil")) {
+            } else if (pkgLower.contains("bb.android") || pkgLower.contains("bancodobrasil") || combinedLower.contains("bancodobrasil") || combinedLower.contains("banco do brasil")) {
                 matchedBank = "BB";
-            } else if (pkgLower.contains("gabba.caixa") || pkgLower.contains("caixa.tem") || pkgLower.contains("br.gov.caixa") || combinedLower.contains("caixa econômica")) {
+            } else if (pkgLower.contains("caixa") || combinedLower.contains("caixa")) {
                 matchedBank = "Caixa";
             } else if (pkgLower.contains("bradesco") || combinedLower.contains("bradesco")) {
                 matchedBank = "Bradesco";
             } else if (pkgLower.contains("santander") || combinedLower.contains("santander")) {
                 matchedBank = "Santander";
-            } else if (pkgLower.contains("intermedium") || pkgLower.contains("bancointer") || pkgLower.contains("banco.inter") || combinedLower.contains("banco inter")) {
+            } else if (pkgLower.contains("inter") || combinedLower.contains("inter")) {
                 matchedBank = "Inter";
-            } else if (text.contains("R$") || title.contains("R$")) {
-                if (combinedLower.contains("pix") || combinedLower.contains("transferência") || combinedLower.contains("transferencia") || combinedLower.contains("compra") || combinedLower.contains("pagamento")) {
-                    matchedBank = "Nubank"; // default para notificação financeira identificada
-                }
+            } else if (pkgLower.contains("itau") || combinedLower.contains("itau") || combinedLower.contains("itaú")) {
+                matchedBank = "Nubank";
+            } else if (pkgLower.contains("picpay") || combinedLower.contains("picpay")) {
+                matchedBank = "Nubank";
+            } else if (pkgLower.contains("c6bank") || combinedLower.contains("c6")) {
+                matchedBank = "Nubank";
+            } else if (pkgLower.contains("mercadopago") || combinedLower.contains("mercado pago")) {
+                matchedBank = "Nubank";
+            } else if (pkgLower.contains("pagbank") || pkgLower.contains("pagseguro") || combinedLower.contains("pagbank") || combinedLower.contains("pagseguro")) {
+                matchedBank = "Nubank";
+            } else if (combinedLower.contains("r$") || combinedLower.contains("r $") || combinedLower.contains("pix") || combinedLower.contains("transferência") || combinedLower.contains("transferencia") || combinedLower.contains("compra") || combinedLower.contains("pagamento")) {
+                matchedBank = "Nubank"; // default para notificação bancária detectada
             }
 
             if (matchedBank == null) {
@@ -160,7 +181,7 @@ public class BankNotificationListener extends NotificationListenerService {
             SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
             Date now = new Date();
 
-            String notifId = "android_" + System.currentTimeMillis() + "_" + matchedBank.toLowerCase();
+            String notifId = "android_" + sbn.getId() + "_" + sbn.getPostTime();
             JSONObject notifObj = new JSONObject();
             notifObj.put("id", notifId);
             notifObj.put("bank", matchedBank);
@@ -169,16 +190,17 @@ public class BankNotificationListener extends NotificationListenerService {
             notifObj.put("date", dateFormat.format(now));
             notifObj.put("time", timeFormat.format(now));
             notifObj.put("package", packageName);
+            notifObj.put("postTime", sbn.getPostTime());
 
             SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
-            // Deduplicação persistente via hash para nunca notificar a mesma notificação repetidamente
-            String hash = String.valueOf((matchedBank + "|" + title + "|" + text).hashCode());
+            // Identificador único do evento de notificação baseado no ID do Android e timestamp da postagem
+            String uniqueEventKey = sbn.getId() + "_" + sbn.getPostTime();
             String notifiedJson = prefs.getString(KEY_NOTIFIED_HASHES, "[]");
             JSONArray notifiedArray = new JSONArray(notifiedJson);
             boolean alreadyNotified = false;
             for (int i = 0; i < notifiedArray.length(); i++) {
-                if (hash.equals(notifiedArray.optString(i))) {
+                if (uniqueEventKey.equals(notifiedArray.optString(i))) {
                     alreadyNotified = true;
                     break;
                 }
@@ -190,7 +212,7 @@ public class BankNotificationListener extends NotificationListenerService {
             boolean duplicate = false;
             for (int i = 0; i < array.length(); i++) {
                 JSONObject obj = array.getJSONObject(i);
-                if (text.equals(obj.optString("text")) && title.equals(obj.optString("title"))) {
+                if (notifId.equals(obj.optString("id"))) {
                     duplicate = true;
                     break;
                 }
@@ -209,9 +231,9 @@ public class BankNotificationListener extends NotificationListenerService {
                 } catch (Exception ignored) {}
             }
 
-            // Dispara notificação nativa apenas se postSystemNotification for true e não tiver sido notificada antes
+            // Dispara notificação nativa com banner apenas para novos eventos de notificação recebidos
             if (postSystemNotification && !alreadyNotified) {
-                notifiedArray.put(hash);
+                notifiedArray.put(uniqueEventKey);
                 if (notifiedArray.length() > 200) {
                     JSONArray trimmed = new JSONArray();
                     for (int i = notifiedArray.length() - 100; i < notifiedArray.length(); i++) {
@@ -260,7 +282,7 @@ public class BankNotificationListener extends NotificationListenerService {
 
             int notifIntId = Math.abs(notifId.hashCode());
 
-            // Ação 1: Conciliar (Abre o HomeMoney na fila/modal de conciliação)
+            // Ação 1: Registrar Agora (Abre o HomeMoney na fila/modal de conciliação)
             Intent openIntent = new Intent(this, MainActivity.class);
             openIntent.setAction("OPEN_RECONCILIATION");
             openIntent.putExtra("notification_id", notifId);
