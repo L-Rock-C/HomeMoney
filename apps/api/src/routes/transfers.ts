@@ -186,4 +186,64 @@ export const transfersRoutes: FastifyPluginAsync = async (app) => {
       notification: updated,
     });
   });
+
+  // Rota de Simulação (apenas para testes / desenvolvimento)
+  app.post('/simulate', async (request, reply) => {
+    const user = await getAuthUser(request);
+    if (!user) {
+      return reply.status(401).send({ error: 'Usuário não autenticado.' });
+    }
+
+    const { direction = 'INCOMING', amount = 65.5, description = 'Simulação: Almoço compartilhado', otherEmail } =
+      (request.body as any) || {};
+
+    let otherUser = null;
+    if (otherEmail) {
+      otherUser = await prisma.user.findUnique({ where: { email: otherEmail.toLowerCase().trim() } });
+    } else {
+      // Procura primeiro Letícia ou qualquer outro usuário registrado
+      otherUser = await prisma.user.findFirst({
+        where: {
+          id: { not: user.id },
+          email: { contains: 'leticia', mode: 'insensitive' },
+        },
+      });
+
+      if (!otherUser) {
+        otherUser = await prisma.user.findFirst({
+          where: { id: { not: user.id } },
+        });
+      }
+    }
+
+    if (!otherUser) {
+      return reply.status(400).send({ error: 'Nenhum outro usuário cadastrado para simular transferência.' });
+    }
+
+    const senderId = direction === 'INCOMING' ? otherUser.id : user.id;
+    const receiverId = direction === 'INCOMING' ? user.id : otherUser.id;
+
+    const notif = await prisma.transferNotification.create({
+      data: {
+        senderId,
+        receiverId,
+        description: String(description),
+        amount: Number(amount) || 50.0,
+        type: 'REIMBURSEMENT',
+        date: new Date(),
+        paymentMethod: 'Pix',
+        notes: `Simulação de teste criada em ${new Date().toLocaleTimeString('pt-BR')}`,
+        status: 'PENDING',
+      },
+      include: {
+        sender: { select: { id: true, name: true, email: true, avatar: true } },
+        receiver: { select: { id: true, name: true, email: true, avatar: true } },
+      },
+    });
+
+    return reply.status(201).send({
+      message: `Simulação de transferência (${direction === 'INCOMING' ? 'Recebida' : 'Enviada'}) criada com sucesso!`,
+      notification: notif,
+    });
+  });
 };

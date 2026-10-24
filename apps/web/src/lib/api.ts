@@ -558,3 +558,22 @@ export async function fetchTransferHistory() {
   return res.json();
 }
 
+export async function simulateTransferNotification(data: {
+  direction?: 'INCOMING' | 'OUTGOING';
+  amount?: number;
+  description?: string;
+  otherEmail?: string;
+}) {
+  const res = await fetch(`${API_BASE}/transfers/simulate`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Falha ao simular transferência');
+  }
+  return res.json();
+}
+
+

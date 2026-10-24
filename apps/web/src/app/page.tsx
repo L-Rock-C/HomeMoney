@@ -41,6 +41,7 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
+  FlaskConical,
 } from 'lucide-react';
 import {
   fetchMonthlyReports,
@@ -52,6 +53,7 @@ import {
   fetchTransactions,
   toggleTransactionPaid,
   deleteTransaction,
+  deletePerson,
   getStoredUser,
   fetchCurrentUser,
   getAuthToken,
@@ -69,6 +71,9 @@ import { NotificationHistoryModal } from '../components/NotificationHistoryModal
 import { NotificationHistoryView } from '../components/NotificationHistoryView';
 import { ProfileContactsView } from '../components/ProfileContactsView';
 import { TransferRecognitionModal } from '../components/TransferRecognitionModal';
+import { DevSimulatorView } from '../components/DevSimulatorView';
+import { TransactionDetailModal } from '../components/TransactionDetailModal';
+import { PeopleTableView } from '../components/PeopleTableView';
 import { CategoryDonutChart, MonthlyBarChart } from '../components/FinanceCharts';
 import { SelectDropdown } from '../components/ui/FormControls';
 import {
@@ -87,9 +92,9 @@ const getCurrentMonthKey = () => {
 };
 
 // ============================================================================
-// Local Persistence Cache (Stale-While-Revalidate para inicialização instantânea)
+// Local Persistence Cache (Stale-While-Revalidate com isolamento por usuário)
 // ============================================================================
-const CACHE_KEY = 'homemoney_app_cache_v1';
+const getCacheKey = (userId?: string) => (userId ? `homemoney_app_cache_${userId}` : 'homemoney_app_cache_v1');
 
 interface AppCacheData {
   monthlyReports: any[];
@@ -104,32 +109,56 @@ interface AppCacheData {
   cachedAt: number;
 }
 
-function getStoredAppCache(): AppCacheData | null {
+function getStoredAppCache(userId?: string): AppCacheData | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
+    const key = getCacheKey(userId);
+    const raw = localStorage.getItem(key) || (userId ? null : localStorage.getItem('homemoney_app_cache_v1'));
     if (!raw) return null;
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
   } catch {
     return null;
   }
 }
 
-function saveAppCache(data: Omit<AppCacheData, 'cachedAt'>) {
+function saveAppCache(data: Partial<AppCacheData>, userId?: string) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ ...data, cachedAt: Date.now() }));
+    const key = getCacheKey(userId);
+    const current = getStoredAppCache(userId) || ({} as any);
+    const merged = {
+      ...current,
+      ...data,
+      cachedAt: Date.now(),
+    };
+    localStorage.setItem(key, JSON.stringify(merged));
+    if (userId) {
+      localStorage.setItem('homemoney_app_cache_v1', JSON.stringify(merged));
+    }
   } catch (e) {
     console.warn('Erro ao salvar cache local:', e);
   }
 }
 
-function clearAppCache() {
+function clearAppCache(userId?: string) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.removeItem(CACHE_KEY);
+    if (userId) {
+      localStorage.removeItem(getCacheKey(userId));
+    }
+    localStorage.removeItem('homemoney_app_cache_v1');
   } catch {}
 }
+
+// Verifica se o usuário logado é o perfil especial (Lucas) com acesso ao Simulador
+export const isSpecialDevUser = (user: any) => {
+  if (!user) return false;
+  const email = (user.email || '').toLowerCase().trim();
+  const name = (user.name || '').toLowerCase().trim();
+  return email === 'lucas@homemoney.com' || name.startsWith('lucas');
+};
 
 export default function HomePage() {
   const router = useRouter();
@@ -147,9 +176,10 @@ export default function HomePage() {
 
   // App data states
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'TRANSACTIONS' | 'BALANCE' | 'PEOPLE' | 'WALLETS' | 'PROFILE' | 'SUGGESTIONS' | 'MANAGER'>('DASHBOARD');
+  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'TRANSACTIONS' | 'BALANCE' | 'PEOPLE' | 'WALLETS' | 'PROFILE' | 'SUGGESTIONS' | 'MANAGER' | 'DEV_SIMULATOR'>('DASHBOARD');
   const [showTransactionKPIs, setShowTransactionKPIs] = useState(false);
   const [showWalletKPIs, setShowWalletKPIs] = useState(false);
+  const [selectedDetailTransaction, setSelectedDetailTransaction] = useState<any | null>(null);
 
 
   // Date Filter states
@@ -331,7 +361,9 @@ export default function HomePage() {
     }
 
     // 1. Tenta hidratar o estado a partir do cache local imediatamente (0ms)
-    const cached = getStoredAppCache();
+    const savedUser = getStoredUser();
+    const activeUserId = savedUser?.id;
+    const cached = getStoredAppCache(activeUserId);
     if (cached) {
       if (cached.monthlyReports?.length) setMonthlyReports(cached.monthlyReports);
       if (cached.accounts?.length) setAccounts(cached.accounts);
@@ -353,7 +385,6 @@ export default function HomePage() {
       return;
     }
 
-    const savedUser = getStoredUser();
     if (savedUser) {
       setCurrentUser(savedUser);
     }
@@ -363,7 +394,7 @@ export default function HomePage() {
         setCurrentUser(u);
       } else {
         clearAuthToken();
-        clearAppCache();
+        clearAppCache(activeUserId);
         router.push('/login');
       }
     });
@@ -373,8 +404,9 @@ export default function HomePage() {
   }, [router]);
 
   const handleLogout = () => {
+    const uid = currentUser?.id || getStoredUser()?.id;
     clearAuthToken();
-    clearAppCache();
+    clearAppCache(uid);
     setCurrentUser(null);
     setMonthlyReports([]);
     setCategoriesReport({ grandTotal: 0, categories: [] });
@@ -398,7 +430,7 @@ export default function HomePage() {
     }
   }
 
-  // Load Initial Data (com persistência em cache)
+  // Load Initial Data (com persistência em cache por usuário)
   async function loadInitialData(showLoading = false) {
     try {
       if (showLoading) setLoading(true);
@@ -427,6 +459,7 @@ export default function HomePage() {
       const filterResult = await fetchTransactionsForFilter(initialMonth, '', '');
 
       // Persiste no cache local para carregamento instantâneo nas próximas aberturas
+      const activeUid = currentUser?.id || getStoredUser()?.id;
       saveAppCache({
         monthlyReports: monthsData,
         accounts: accs,
@@ -437,7 +470,7 @@ export default function HomePage() {
         categoriesReport: filterResult?.catRep || { grandTotal: 0, categories: [] },
         availableMonths: allMonths,
         selectedMonth: initialMonth,
-      });
+      }, activeUid);
 
       // Carrega transferências pendentes de contatos vinculados
       loadPendingTransfersData();
@@ -450,6 +483,7 @@ export default function HomePage() {
 
   async function fetchTransactionsForFilter(month?: string, start?: string, end?: string) {
     try {
+      const activeUid = currentUser?.id || getStoredUser()?.id;
       if (filterMode === 'MONTH' || month) {
         const m = month || selectedMonth;
         const [catRep, trans] = await Promise.all([
@@ -458,6 +492,11 @@ export default function HomePage() {
         ]);
         setCategoriesReport(catRep);
         setTransactions(trans);
+        saveAppCache({
+          transactions: trans,
+          categoriesReport: catRep,
+          selectedMonth: m,
+        }, activeUid);
         return { catRep, trans };
       } else {
         const trans = await fetchTransactions({
@@ -487,6 +526,10 @@ export default function HomePage() {
           .sort((a, b) => b.total - a.total);
         const catRep = { grandTotal: grand, categories: cats };
         setCategoriesReport(catRep);
+        saveAppCache({
+          transactions: trans,
+          categoriesReport: catRep,
+        }, activeUid);
         return { catRep, trans };
       }
     } catch (err) {
@@ -519,11 +562,19 @@ export default function HomePage() {
   async function handleTogglePaid(id: string) {
     try {
       await toggleTransactionPaid(id);
-      await fetchTransactionsForFilter(filterMode === 'MONTH' ? selectedMonth : undefined, startDate, endDate);
+      const filterRes = await fetchTransactionsForFilter(filterMode === 'MONTH' ? selectedMonth : undefined, startDate, endDate);
       const updatedMonths = await fetchMonthlyReports();
       setMonthlyReports(updatedMonths);
       const updatedAccs = await fetchAccounts();
       setAccounts(updatedAccs);
+
+      // Sincroniza cache local imediatamente
+      const activeUid = currentUser?.id || getStoredUser()?.id;
+      saveAppCache({
+        transactions: filterRes?.trans || transactions.map((t) => (t.id === id ? { ...t, paid: !t.paid } : t)),
+        monthlyReports: updatedMonths,
+        accounts: updatedAccs,
+      }, activeUid);
     } catch (err) {
       console.error(err);
     }
@@ -533,11 +584,19 @@ export default function HomePage() {
     if (!confirm('Deseja excluir esta transação?')) return;
     try {
       await deleteTransaction(id);
-      await fetchTransactionsForFilter(filterMode === 'MONTH' ? selectedMonth : undefined, startDate, endDate);
+      const filterRes = await fetchTransactionsForFilter(filterMode === 'MONTH' ? selectedMonth : undefined, startDate, endDate);
       const updatedMonths = await fetchMonthlyReports();
       setMonthlyReports(updatedMonths);
       const updatedAccs = await fetchAccounts();
       setAccounts(updatedAccs);
+
+      // Sincroniza cache local imediatamente
+      const activeUid = currentUser?.id || getStoredUser()?.id;
+      saveAppCache({
+        transactions: filterRes?.trans || transactions.filter((t) => t.id !== id),
+        monthlyReports: updatedMonths,
+        accounts: updatedAccs,
+      }, activeUid);
     } catch (err) {
       console.error(err);
     }
@@ -906,6 +965,36 @@ export default function HomePage() {
               {!sidebarCollapsed && <span>Gerenciador</span>}
             </button>
           </div>
+
+          {/* Simulador Dev (Exclusivo Perfil Lucas) */}
+          {isSpecialDevUser(currentUser) && (
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  setActiveTab('DEV_SIMULATOR');
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full flex items-center ${
+                  sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-3'
+                } py-2.5 rounded-xl text-sm font-medium transition cursor-pointer ${
+                  activeTab === 'DEV_SIMULATOR'
+                    ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 font-bold border border-purple-500/30'
+                    : 'text-purple-600 dark:text-purple-400 hover:bg-purple-500/10'
+                }`}
+                title="Simulador de Testes (Dev)"
+              >
+                <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+                  <FlaskConical className="w-5 h-5 min-w-5 shrink-0 text-purple-500" />
+                  {!sidebarCollapsed && <span>Simulador Dev</span>}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30">
+                    DEV
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
         </nav>
 
         {/* Sidebar Footer: User & Theme Toggle */}
@@ -995,11 +1084,12 @@ export default function HomePage() {
                 {activeTab === 'DASHBOARD' && 'Visão Geral'}
                 {activeTab === 'TRANSACTIONS' && 'Extrato de Transações'}
                 {activeTab === 'BALANCE' && 'Balanço Consolidado'}
-                {activeTab === 'PEOPLE' && 'Acertos com Terceiros'}
+                {activeTab === 'PEOPLE' && 'Contatos & Acertos'}
                 {activeTab === 'WALLETS' && 'Carteiras & Poupanças'}
                 {activeTab === 'PROFILE' && 'Meu Perfil & Conexões'}
                 {activeTab === 'SUGGESTIONS' && 'Histórico de Sugestões Bancárias'}
                 {activeTab === 'MANAGER' && 'Gerenciador de Cadastros'}
+                {activeTab === 'DEV_SIMULATOR' && 'Simulador de Testes (Dev)'}
               </h2>
             </div>
           </div>
@@ -1020,7 +1110,7 @@ export default function HomePage() {
               </button>
             )}
 
-            {activeTab !== 'PROFILE' && activeTab !== 'SUGGESTIONS' && activeTab !== 'MANAGER' && (
+            {activeTab !== 'PROFILE' && activeTab !== 'SUGGESTIONS' && activeTab !== 'MANAGER' && activeTab !== 'DEV_SIMULATOR' && (
               <>
                 {/* Botão de Checagem e Atualização de Notificações */}
                 <button
@@ -1616,7 +1706,8 @@ export default function HomePage() {
 
               {/* Transactions Table */}
               <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 overflow-hidden shadow-sm w-full max-w-full">
-                <div className="overflow-x-auto w-full max-w-full">
+                {/* Desktop View: Full 8-column Table */}
+                <div className="hidden md:block overflow-x-auto w-full max-w-full">
                   <table className="w-full text-left text-sm min-w-[700px]">
                     <thead className="bg-slate-50 dark:bg-slate-900/80 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                       <tr>
@@ -1723,6 +1814,81 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Mobile View: Compact rows with 100% width and tap-to-open detail modal */}
+                <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/80">
+                  {filteredTransactions.map((t) => {
+                    const isIncome = t.type === 'INCOME';
+                    return (
+                      <div
+                        key={t.id}
+                        onClick={() => setSelectedDetailTransaction(t)}
+                        className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 active:bg-slate-100 dark:active:bg-slate-800/60 transition cursor-pointer"
+                      >
+                        {/* Left: Indicator dot, description & subtitle */}
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <span
+                            className={`w-2 h-2 rounded-full shrink-0 ${
+                              isIncome ? 'bg-emerald-500' : 'bg-rose-500'
+                            }`}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-semibold text-slate-900 dark:text-white text-xs truncate">
+                                {t.description}
+                              </span>
+                              {t.totalInstallments && t.totalInstallments > 1 && (
+                                <span className="text-[10px] px-1 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-mono shrink-0">
+                                  {t.currentInstallment}/{t.totalInstallments}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                              <span>{t.dueDate}</span>
+                              <span>•</span>
+                              <span className="truncate">{t.category?.name || 'Geral'}</span>
+                              {t.person && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-amber-600 dark:text-amber-400 font-medium truncate">
+                                    {t.person.name}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right: Amount & Status Badge */}
+                        <div className="text-right shrink-0">
+                          <div
+                            className={`text-xs font-bold whitespace-nowrap ${
+                              isIncome
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-slate-900 dark:text-white'
+                            }`}
+                          >
+                            {isIncome ? '+' : '-'} {formatBRL(t.amount)}
+                          </div>
+                          <span
+                            className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 ${
+                              t.paid
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                            }`}
+                          >
+                            {t.paid ? 'Pago' : 'Pendente'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {filteredTransactions.length === 0 && (
+                    <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
+                      Nenhuma transação encontrada para este filtro.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1783,87 +1949,25 @@ export default function HomePage() {
           )}
 
           {/* ========================================================================= */}
-          {/* TAB 4: Acerto de Contas & Terceiros (Apenas pendências) */}
+          {/* TAB 4: Contatos & Terceiros (Tabela Completa de Contatos) */}
           {/* ========================================================================= */}
           {activeTab === 'PEOPLE' && (
-            <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <HandCoins className="w-5 h-5 text-amber-500" />
-                    Acerto de Contas & Reembolsos Pendentes
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Clique em qualquer contato para ver a lista detalhada de despesas adiantadas por você e realizar a quitação.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setIsManagerOpen(true)}
-                  className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition self-start sm:self-auto"
-                >
-                  Gerenciar Contatos
-                </button>
-              </div>
-
-              {people.filter((p) => p.toReceive > 0 || p.toPay > 0).length === 0 ? (
-                <div className="p-12 text-center bg-white dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                    Tudo em dia! Nenhum reembolso pendente
-                  </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                    Todas as despesas adiantadas ou pagas a terceiros estão devidamente quitadas e conciliadas.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {people
-                    .filter((p) => p.toReceive > 0 || p.toPay > 0)
-                    .map((p) => (
-                      <div
-                        key={p.id}
-                        onClick={() => setSettlePerson(p)}
-                        className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 space-y-4 hover:border-emerald-500/60 dark:hover:border-emerald-500/50 hover:shadow-md transition cursor-pointer group"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
-                              {p.name.slice(0, 2).toUpperCase()}
-                            </div>
-                            <div>
-                              <h4 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
-                                {p.name}
-                              </h4>
-                              <p className="text-xs text-slate-500 dark:text-slate-400">
-                                {p.pendingCount || 1} despesa{(p.pendingCount || 1) > 1 ? 's' : ''} a acertar
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800/60 flex items-center justify-between">
-                          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                            Deve para Lucas:
-                          </span>
-                          <span className="text-base font-bold text-amber-600 dark:text-amber-400">
-                            {formatBRL(p.toReceive)}
-                          </span>
-                        </div>
-
-                        <button
-                          type="button"
-                          className="w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-emerald-500/10 group-hover:bg-emerald-500 group-hover:text-white dark:group-hover:text-slate-950 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 transition flex items-center justify-center gap-1.5 shadow-sm"
-                        >
-                          <HandCoins className="w-4 h-4" />
-                          Ver Transações & Quitar ({formatBRL(p.toReceive)})
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
+            <PeopleTableView
+              people={people}
+              formatBRL={formatBRL}
+              onSettle={(p) => setSettlePerson(p)}
+              onEdit={() => setActiveTab('PROFILE')}
+              onDelete={async (p) => {
+                if (!confirm(`Deseja realmente excluir o contato "${p.name}"?`)) return;
+                try {
+                  await deletePerson(p.id);
+                  await loadInitialData();
+                } catch (e: any) {
+                  alert(e?.message || 'Erro ao excluir contato');
+                }
+              }}
+              onCreateContact={() => setActiveTab('PROFILE')}
+            />
           )}
 
           {/* ========================================================================= */}
@@ -2097,6 +2201,17 @@ export default function HomePage() {
               initialSection={managerSection}
             />
           )}
+
+          {/* ========================================================================= */}
+          {/* TAB 8: Simulador de Testes (Dev - Exclusivo Lucas) */}
+          {/* ========================================================================= */}
+          {activeTab === 'DEV_SIMULATOR' && isSpecialDevUser(currentUser) && (
+            <DevSimulatorView
+              currentUser={currentUser}
+              onRefreshAllData={loadInitialData}
+              formatBRL={formatBRL}
+            />
+          )}
         </main>
       </div>
 
@@ -2177,6 +2292,28 @@ export default function HomePage() {
         }}
         pendingTransfers={pendingTransfers}
         accounts={accounts}
+        formatBRL={formatBRL}
+      />
+
+      {/* Modal de Detalhes da Transação (Mobile Compact View) */}
+      <TransactionDetailModal
+        isOpen={Boolean(selectedDetailTransaction)}
+        onClose={() => setSelectedDetailTransaction(null)}
+        transaction={selectedDetailTransaction}
+        onEdit={(t) => {
+          setSelectedDetailTransaction(null);
+          handleOpenEdit(t);
+        }}
+        onDelete={async (id) => {
+          setSelectedDetailTransaction(null);
+          await handleDelete(id);
+        }}
+        onTogglePaid={async (id) => {
+          await handleTogglePaid(id);
+          if (selectedDetailTransaction && selectedDetailTransaction.id === id) {
+            setSelectedDetailTransaction((prev: any) => (prev ? { ...prev, paid: !prev.paid } : null));
+          }
+        }}
         formatBRL={formatBRL}
       />
     </div>
