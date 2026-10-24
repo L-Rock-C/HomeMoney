@@ -243,6 +243,7 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export const updateProfileSchema = z.object({
   name: z.string().min(1, 'Nome não pode ser vazio').optional(),
   email: z.string().email('E-mail inválido').optional(),
+  avatar: z.string().nullable().optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(4, 'Nova senha deve ter no mínimo 4 caracteres').optional(),
 });

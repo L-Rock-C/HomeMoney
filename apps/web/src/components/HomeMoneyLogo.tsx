@@ -7,15 +7,15 @@ interface HomeMoneyLogoProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   showText?: boolean;
   textColor?: string;
-  variant?: 'svg' | 'image';
+  variant?: 'image' | 'svg';
 }
 
 const sizeMap = {
-  xs: { icon: 20, text: 'text-sm' },
-  sm: { icon: 28, text: 'text-base' },
-  md: { icon: 36, text: 'text-lg' },
-  lg: { icon: 48, text: 'text-2xl' },
-  xl: { icon: 64, text: 'text-3xl' },
+  xs: { icon: 22, text: 'text-sm' },
+  sm: { icon: 30, text: 'text-base' },
+  md: { icon: 38, text: 'text-lg' },
+  lg: { icon: 50, text: 'text-2xl' },
+  xl: { icon: 66, text: 'text-3xl' },
 };
 
 export function HomeMoneyLogo({
@@ -23,7 +23,7 @@ export function HomeMoneyLogo({
   size = 'md',
   showText = true,
   textColor,
-  variant = 'svg',
+  variant = 'image',
 }: HomeMoneyLogoProps) {
   const { icon: iconSize, text: textSize } = sizeMap[size];
 
@@ -31,44 +31,49 @@ export function HomeMoneyLogo({
     <div className={`inline-flex items-center gap-2.5 select-none ${className}`}>
       {/* Icon portion */}
       {variant === 'image' ? (
-        <img
-          src="/logo.png"
-          alt="HomeMoney Logo"
-          width={iconSize}
-          height={iconSize}
-          className="object-contain shrink-0 rounded-xl"
-        />
+        <div
+          style={{ width: iconSize, height: iconSize }}
+          className="shrink-0 flex items-center justify-center relative"
+        >
+          <img
+            src="/logo-icon.png"
+            alt="HomeMoney Logo"
+            width={iconSize}
+            height={iconSize}
+            className="w-full h-full object-contain shrink-0 drop-shadow-xs"
+          />
+        </div>
       ) : (
         <div
           style={{ width: iconSize, height: iconSize }}
           className="shrink-0 flex items-center justify-center relative"
         >
           <svg
-            viewBox="0 0 100 100"
+            viewBox="0 0 90 90"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             className="w-full h-full"
           >
             {/* House Outline with Chimney */}
             <path
-              d="M 18 42 L 50 14 L 66 28 L 66 18.5 L 72.5 18.5 L 72.5 33.7 L 82 42"
+              d="M 12 43 L 45 13 L 61 27 L 61 17 L 68 17 L 68 33 L 78 43"
               stroke="#688746"
-              strokeWidth="6"
+              strokeWidth="5.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
             {/* Left and Right Walls + Bottom Floor with Gap for Dollar */}
             <path
-              d="M 23.5 40.5 L 23.5 83.5 L 43.5 83.5"
+              d="M 18 41 L 18 78 L 38 78"
               stroke="#688746"
-              strokeWidth="6"
+              strokeWidth="5.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
             <path
-              d="M 56.5 83.5 L 76.5 83.5 L 76.5 40.5"
+              d="M 52 78 L 72 78 L 72 41"
               stroke="#688746"
-              strokeWidth="6"
+              strokeWidth="5.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -76,19 +81,19 @@ export function HomeMoneyLogo({
             {/* Dollar Sign $ */}
             {/* Vertical Stem */}
             <line
-              x1="50"
-              y1="34"
-              x2="50"
-              y2="92"
+              x1="45"
+              y1="30"
+              x2="45"
+              y2="85"
               stroke="#688746"
-              strokeWidth="6"
+              strokeWidth="5.5"
               strokeLinecap="round"
             />
             {/* S-curves of Dollar */}
             <path
-              d="M 60 46 C 60 41 42 39 42 50 C 42 61 58 57 58 68 C 58 79 40 77 40 72"
+              d="M 55 42 C 55 37 38 35 38 46 C 38 57 53 54 53 64 C 53 74 36 72 36 67"
               stroke="#688746"
-              strokeWidth="6.5"
+              strokeWidth="6"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -98,7 +103,7 @@ export function HomeMoneyLogo({
 
       {/* Typography portion */}
       {showText && (
-        <div className={`font-sans tracking-tight font-bold flex items-baseline ${textSize} ${textColor || ''}`}>
+        <div className={`font-sans tracking-tight font-bold flex items-baseline leading-none ${textSize} ${textColor || ''}`}>
           <span className="text-[#688746] font-extrabold">Home</span>
           <span className="text-[#45543c] dark:text-slate-100 font-medium ml-0.5">Money</span>
         </div>

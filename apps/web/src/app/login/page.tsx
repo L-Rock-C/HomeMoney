@@ -32,33 +32,31 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'aero'>('light');
+
+  function applyTheme(newTheme: 'light' | 'dark' | 'aero') {
+    setTheme(newTheme);
+    localStorage.setItem('homemoney-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.remove('dark', 'theme-aero');
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else if (newTheme === 'aero') {
+      document.documentElement.classList.add('theme-aero');
+    }
+  }
 
   // Initialize theme from document or localStorage
   useEffect(() => {
     const savedTheme = localStorage.getItem('homemoney-theme') || localStorage.getItem('theme');
-    const isDark = document.documentElement.classList.contains('dark') || savedTheme === 'dark';
-    if (isDark) {
-      setTheme('dark');
-      document.documentElement.classList.add('dark');
-    } else {
-      setTheme('light');
-      document.documentElement.classList.remove('dark');
-    }
+    const initialTheme = savedTheme === 'dark' || savedTheme === 'aero' ? (savedTheme as 'dark' | 'aero') : 'light';
+    applyTheme(initialTheme);
   }, []);
 
   const toggleTheme = () => {
-    if (theme === 'dark') {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('homemoney-theme', 'light');
-      localStorage.setItem('theme', 'light');
-      setTheme('light');
-    } else {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('homemoney-theme', 'dark');
-      localStorage.setItem('theme', 'dark');
-      setTheme('dark');
-    }
+    const order: ('light' | 'dark' | 'aero')[] = ['light', 'dark', 'aero'];
+    const nextIdx = (order.indexOf(theme) + 1) % order.length;
+    applyTheme(order[nextIdx]);
   };
 
   // Check if already authenticated
@@ -125,10 +123,22 @@ export default function LoginPage() {
       <div className="w-full max-w-md flex items-center justify-end mb-6 z-10 px-2">
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-emerald-500 transition shadow-sm"
-          title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+          className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-emerald-500 transition shadow-sm cursor-pointer"
+          title={
+            theme === 'aero'
+              ? 'Tema Windows 7 Aero (Clique para alternar para Claro)'
+              : theme === 'dark'
+              ? 'Tema Escuro (Clique para alternar para Windows 7 Aero)'
+              : 'Tema Claro (Clique para alternar para Escuro)'
+          }
         >
-          {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
+          {theme === 'aero' ? (
+            <Sparkles className="w-4 h-4 text-sky-500 animate-pulse" />
+          ) : theme === 'dark' ? (
+            <Sun className="w-4 h-4 text-amber-400" />
+          ) : (
+            <Moon className="w-4 h-4 text-indigo-500" />
+          )}
         </button>
       </div>
 

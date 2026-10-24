@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   User as UserIcon,
@@ -29,6 +29,8 @@ import {
   Filter,
   ShieldAlert,
   UserCheck,
+  Camera,
+  Upload,
 } from 'lucide-react';
 import {
   updateUserProfile,
@@ -67,6 +69,7 @@ export function ProfileContactsView({
   categories = [],
 }: ProfileContactsViewProps) {
   const router = useRouter();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Tab switch: 'PROFILE' | 'CONTACTS'
   const [subTab, setSubTab] = useState<'PROFILE' | 'CONTACTS'>('CONTACTS');
@@ -74,6 +77,7 @@ export function ProfileContactsView({
   // Profile Form state
   const [profileName, setProfileName] = useState(currentUser?.name || '');
   const [profileEmail, setProfileEmail] = useState(currentUser?.email || '');
+  const [profileAvatar, setProfileAvatar] = useState<string | null>(currentUser?.avatar || null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -198,8 +202,47 @@ export function ProfileContactsView({
     if (currentUser) {
       setProfileName(currentUser.name || '');
       setProfileEmail(currentUser.email || '');
+      setProfileAvatar(currentUser.avatar || null);
     }
   }, [currentUser]);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 8 * 1024 * 1024) {
+      setProfileMsg({ type: 'error', text: 'A imagem deve ter no máximo 8MB.' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 200;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const minSide = Math.min(img.width, img.height);
+        const sx = (img.width - minSide) / 2;
+        const sy = (img.height - minSide) / 2;
+
+        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        setProfileAvatar(dataUrl);
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveAvatar = () => {
+    setProfileAvatar(null);
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+  };
 
   // Handle Profile Update
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -218,6 +261,7 @@ export function ProfileContactsView({
       await updateUserProfile({
         name: profileName.trim(),
         email: profileEmail.trim(),
+        avatar: profileAvatar,
         ...(newPassword ? { currentPassword, newPassword } : {}),
       });
 
@@ -407,8 +451,12 @@ export function ProfileContactsView({
       {/* Top Banner & Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-6 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 shadow-sm w-full max-w-full">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-slate-950 font-black text-lg sm:text-xl shadow-lg shadow-emerald-500/20 shrink-0">
-            {(currentUser?.name || 'U').slice(0, 1).toUpperCase()}
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-slate-950 font-black text-lg sm:text-xl shadow-lg shadow-emerald-500/20 shrink-0 overflow-hidden">
+            {currentUser?.avatar ? (
+              <img src={currentUser.avatar} alt={currentUser.name || 'Perfil'} className="w-full h-full object-cover" />
+            ) : (
+              (currentUser?.name || 'U').slice(0, 1).toUpperCase()
+            )}
           </div>
           <div className="min-w-0 truncate">
             <div className="flex items-center gap-2">
@@ -696,13 +744,17 @@ export function ProfileContactsView({
                               <td className="py-3.5 px-4">
                                 <div className="flex items-center gap-3">
                                   <div
-                                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
+                                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-xs overflow-hidden ${
                                       isLinked
                                         ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                                     }`}
                                   >
-                                    {person.name.slice(0, 2).toUpperCase()}
+                                    {person.linkedUser?.avatar ? (
+                                      <img src={person.linkedUser.avatar} alt={person.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      person.name.slice(0, 2).toUpperCase()
+                                    )}
                                   </div>
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-1.5">
@@ -817,13 +869,17 @@ export function ProfileContactsView({
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-xs ${
+                              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-xs overflow-hidden ${
                                 isLinked
                                   ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                               }`}
                             >
-                              {person.name.slice(0, 2).toUpperCase()}
+                              {person.linkedUser?.avatar ? (
+                                <img src={person.linkedUser.avatar} alt={person.name} className="w-full h-full object-cover" />
+                              ) : (
+                                person.name.slice(0, 2).toUpperCase()
+                              )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
@@ -924,6 +980,70 @@ export function ProfileContactsView({
             )}
 
             <form onSubmit={handleUpdateProfile} className="space-y-4">
+              {/* Foto de Perfil Pública */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 space-y-3">
+                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                  Foto de Perfil (Pública para Vínculos)
+                </label>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  {/* Avatar Preview */}
+                  <div className="relative group shrink-0 self-start sm:self-auto">
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-slate-950 font-black text-2xl shadow-md border-2 border-emerald-500/30 overflow-hidden">
+                      {profileAvatar ? (
+                        <img src={profileAvatar} alt="Foto de Perfil" className="w-full h-full object-cover" />
+                      ) : (
+                        (profileName || 'U').slice(0, 1).toUpperCase()
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => avatarInputRef.current?.click()}
+                      className="absolute inset-0 bg-black/40 text-white rounded-2xl opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center transition cursor-pointer text-[10px] font-bold"
+                      title="Alterar Foto"
+                    >
+                      <Camera className="w-5 h-5 mb-0.5" />
+                      <span>Alterar</span>
+                    </button>
+                  </div>
+
+                  {/* Actions & Description */}
+                  <div className="space-y-2 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="file"
+                        ref={avatarInputRef}
+                        onChange={handleAvatarChange}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRef.current?.click()}
+                        className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 text-slate-700 dark:text-slate-300 text-xs font-bold shadow-2xs hover:text-emerald-600 dark:hover:text-emerald-400 transition cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Carregar Imagem</span>
+                      </button>
+
+                      {profileAvatar && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveAvatar}
+                          className="px-3.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Remover Foto</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Esta foto ficará visível publicamente para você e contatos com vínculo aceito (ex: Letícia verá sua foto e você a dela).
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Nome Completo

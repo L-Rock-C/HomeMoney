@@ -16,6 +16,10 @@ import {
   AlertCircle,
   X,
   Settings,
+  Palette,
+  Sun,
+  Moon,
+  Sparkles,
 } from 'lucide-react';
 import {
   createCategory,
@@ -31,7 +35,9 @@ interface ManagerViewProps {
   categories: any[];
   paymentMethods: any[];
   onRefreshData: () => void;
-  initialSection?: 'CATEGORIES' | 'PAYMENTS';
+  initialSection?: 'CATEGORIES' | 'PAYMENTS' | 'THEMES';
+  currentTheme?: 'light' | 'dark' | 'aero';
+  onThemeChange?: (theme: 'light' | 'dark' | 'aero') => void;
 }
 
 export function ManagerView({
@@ -39,8 +45,10 @@ export function ManagerView({
   paymentMethods,
   onRefreshData,
   initialSection = 'CATEGORIES',
+  currentTheme = 'light',
+  onThemeChange,
 }: ManagerViewProps) {
-  const [activeSection, setActiveSection] = useState<'CATEGORIES' | 'PAYMENTS'>(initialSection);
+  const [activeSection, setActiveSection] = useState<'CATEGORIES' | 'PAYMENTS' | 'THEMES'>(initialSection);
   const [categoryTypeFilter, setCategoryTypeFilter] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -57,7 +65,7 @@ export function ManagerView({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  function handleSwitchSection(section: 'CATEGORIES' | 'PAYMENTS') {
+  function handleSwitchSection(section: 'CATEGORIES' | 'PAYMENTS' | 'THEMES') {
     setActiveSection(section);
     setError(null);
     setSuccessMessage(null);
@@ -221,6 +229,21 @@ export function ManagerView({
             <span>Métodos de Pagamento</span>
             <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700">
               {paymentMethods.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleSwitchSection('THEMES')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition cursor-pointer ${
+              activeSection === 'THEMES'
+                ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Palette className="w-3.5 h-3.5" />
+            <span>Temas & Estilos</span>
+            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-200 dark:bg-slate-700">
+              3
             </span>
           </button>
         </div>
@@ -602,6 +625,188 @@ export function ManagerView({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SECTION 3: Temas & Estilos (Claro, Escuro, Windows 7 Frutiger Aero)       */}
+      {/* ========================================================================= */}
+      {activeSection === 'THEMES' && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-sm">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Palette className="w-5 h-5 text-emerald-500" />
+              <span>Aparência & Identidade Visual</span>
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Escolha a identidade visual do HomeMoney. A seleção é salva imediatamente e sincronizada no seu dispositivo.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Tema 1: Claro */}
+            <div
+              onClick={() => onThemeChange && onThemeChange('light')}
+              className={`p-5 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between relative group ${
+                currentTheme === 'light'
+                  ? 'border-emerald-500 bg-white shadow-lg shadow-emerald-500/10 ring-2 ring-emerald-500/20'
+                  : 'border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/30 hover:border-slate-300 dark:hover:border-slate-700'
+              }`}
+            >
+              {currentTheme === 'light' && (
+                <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-bold shadow-xs">
+                  <Check className="w-3 h-3 stroke-[3]" />
+                  <span>Ativo</span>
+                </div>
+              )}
+
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-indigo-500 mb-4 shadow-sm">
+                  <Sun className="w-6 h-6 text-amber-500" />
+                </div>
+                <h4 className="text-base font-bold text-slate-900 dark:text-white">Tema Claro (Padrão)</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Design limpo, minimalista e com alta legibilidade em ambientes iluminados.
+                </p>
+
+                {/* Visual Preview */}
+                <div className="mt-4 p-3 rounded-xl bg-slate-100 border border-slate-200 space-y-2">
+                  <div className="h-3 w-2/3 bg-slate-300 rounded-sm"></div>
+                  <div className="flex gap-2">
+                    <div className="h-6 w-1/2 bg-white rounded-md border border-slate-200 shadow-2xs"></div>
+                    <div className="h-6 w-1/2 bg-emerald-500 rounded-md"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  className={`w-full py-2.5 rounded-xl font-bold text-xs transition cursor-pointer ${
+                    currentTheme === 'light'
+                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+                  }`}
+                >
+                  {currentTheme === 'light' ? 'Tema Ativo' : 'Ativar Tema Claro'}
+                </button>
+              </div>
+            </div>
+
+            {/* Tema 2: Escuro */}
+            <div
+              onClick={() => onThemeChange && onThemeChange('dark')}
+              className={`p-5 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between relative group ${
+                currentTheme === 'dark'
+                  ? 'border-emerald-500 bg-slate-900 shadow-lg shadow-emerald-500/10 ring-2 ring-emerald-500/20'
+                  : 'border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/30 hover:border-slate-300 dark:hover:border-slate-700'
+              }`}
+            >
+              {currentTheme === 'dark' && (
+                <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-bold shadow-xs">
+                  <Check className="w-3 h-3 stroke-[3]" />
+                  <span>Ativo</span>
+                </div>
+              )}
+
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-indigo-400 mb-4 shadow-sm">
+                  <Moon className="w-6 h-6 text-indigo-400" />
+                </div>
+                <h4 className="text-base font-bold text-slate-900 dark:text-white">Tema Escuro (Dark Mode)</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Cores escuras confortáveis para uso noturno com alto contraste em tons esmeralda.
+                </p>
+
+                {/* Visual Preview */}
+                <div className="mt-4 p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div className="h-3 w-2/3 bg-slate-800 rounded-sm"></div>
+                  <div className="flex gap-2">
+                    <div className="h-6 w-1/2 bg-slate-900 rounded-md border border-slate-800"></div>
+                    <div className="h-6 w-1/2 bg-emerald-500 rounded-md"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  className={`w-full py-2.5 rounded-xl font-bold text-xs transition cursor-pointer ${
+                    currentTheme === 'dark'
+                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+                  }`}
+                >
+                  {currentTheme === 'dark' ? 'Tema Ativo' : 'Ativar Tema Escuro'}
+                </button>
+              </div>
+            </div>
+
+            {/* Tema 3: Windows 7 / Frutiger Aero */}
+            <div
+              onClick={() => onThemeChange && onThemeChange('aero')}
+              className={`p-5 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between relative group overflow-hidden ${
+                currentTheme === 'aero'
+                  ? 'border-sky-400 bg-gradient-to-br from-sky-100/90 via-emerald-100/70 to-blue-200/90 shadow-xl shadow-sky-500/20 ring-2 ring-sky-400/40'
+                  : 'border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/30 hover:border-sky-300 dark:hover:border-sky-700'
+              }`}
+            >
+              {/* Glossy shine highlight overlay */}
+              <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/40 to-transparent pointer-events-none rounded-t-3xl"></div>
+
+              {currentTheme === 'aero' && (
+                <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-b from-sky-400 to-sky-600 text-white text-[10px] font-bold shadow-md border border-sky-300">
+                  <Check className="w-3 h-3 stroke-[3]" />
+                  <span>Ativo</span>
+                </div>
+              )}
+
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-b from-sky-400 to-blue-600 flex items-center justify-center text-white mb-4 shadow-md border border-sky-300/60">
+                  <Sparkles className="w-6 h-6 animate-pulse" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white">Windows 7 (Frutiger Aero)</h4>
+                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-400/30">
+                    NOVO
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
+                  Visual clássico Aero Glass com transparências translúcidas, reflexos de vidro líquido e gradientes vibrantes céu & grama.
+                </p>
+
+                {/* Visual Preview */}
+                <div className="mt-4 p-3 rounded-xl bg-gradient-to-b from-sky-200/80 to-blue-300/80 border border-white/60 shadow-inner space-y-2 backdrop-blur-sm">
+                  {/* Aero Window Titlebar simulation */}
+                  <div className="flex items-center justify-between pb-1 border-b border-sky-400/40">
+                    <span className="text-[10px] font-bold text-slate-800 drop-shadow-xs">HomeMoney Aero</span>
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 rounded-full bg-slate-400/60"></span>
+                      <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                      <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="h-6 w-1/2 bg-white/70 rounded-md border border-white/90 shadow-xs"></div>
+                    <div className="h-6 w-1/2 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-md border border-emerald-300 shadow-xs"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-sky-200/80 dark:border-slate-800">
+                <button
+                  type="button"
+                  className={`w-full py-2.5 rounded-xl font-bold text-xs transition cursor-pointer ${
+                    currentTheme === 'aero'
+                      ? 'bg-gradient-to-b from-sky-400 to-sky-600 text-white border border-sky-300 shadow-md'
+                      : 'bg-sky-500/10 text-sky-700 dark:text-sky-300 hover:bg-sky-500/20 border border-sky-500/30'
+                  }`}
+                >
+                  {currentTheme === 'aero' ? 'Tema Ativo' : 'Ativar Windows 7 Aero'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

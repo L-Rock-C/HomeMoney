@@ -165,7 +165,7 @@ export default function HomePage() {
   const router = useRouter();
 
   // Theme state: Default is LIGHT
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'aero'>('light');
 
   // Authentication state
   const [currentUser, setCurrentUser] = useState<any | null>(null);
@@ -209,7 +209,7 @@ export default function HomePage() {
   const [transactionToEdit, setTransactionToEdit] = useState<any | null>(null);
   const [settlePerson, setSettlePerson] = useState<any | null>(null);
   const [isManagerOpen, setIsManagerOpen] = useState(false);
-  const [managerSection, setManagerSection] = useState<'CATEGORIES' | 'PAYMENTS'>('CATEGORIES');
+  const [managerSection, setManagerSection] = useState<'CATEGORIES' | 'PAYMENTS' | 'THEMES'>('CATEGORIES');
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [walletToEdit, setWalletToEdit] = useState<any | null>(null);
 
@@ -352,14 +352,9 @@ export default function HomePage() {
 
   // Initialize theme, authenticate user and hydrate cache immediately
   useEffect(() => {
-    const savedTheme = localStorage.getItem('homemoney-theme') as 'light' | 'dark' | null;
-    const initialTheme = savedTheme || 'light';
-    setTheme(initialTheme);
-    if (initialTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    const savedTheme = localStorage.getItem('homemoney-theme') as 'light' | 'dark' | 'aero' | null;
+    const initialTheme = savedTheme === 'dark' || savedTheme === 'aero' ? savedTheme : 'light';
+    applyTheme(initialTheme);
 
     // 1. Tenta hidratar o estado a partir do cache local imediatamente (0ms)
     const savedUser = getStoredUser();
@@ -420,15 +415,21 @@ export default function HomePage() {
     router.push('/login');
   };
 
-  function toggleTheme() {
-    const nextTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(nextTheme);
-    localStorage.setItem('homemoney-theme', nextTheme);
-    if (nextTheme === 'dark') {
+  function applyTheme(newTheme: 'light' | 'dark' | 'aero') {
+    setTheme(newTheme);
+    localStorage.setItem('homemoney-theme', newTheme);
+    document.documentElement.classList.remove('dark', 'theme-aero');
+    if (newTheme === 'dark') {
       document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    } else if (newTheme === 'aero') {
+      document.documentElement.classList.add('theme-aero');
     }
+  }
+
+  function toggleTheme() {
+    const order: ('light' | 'dark' | 'aero')[] = ['light', 'dark', 'aero'];
+    const nextIdx = (order.indexOf(theme) + 1) % order.length;
+    applyTheme(order[nextIdx]);
   }
 
   // Load Initial Data (com persistência em cache por usuário)
@@ -992,16 +993,36 @@ export default function HomePage() {
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className={`w-full flex items-center gap-3 py-2 rounded-xl text-xs font-semibold border transition ${
-              theme === 'dark'
+            className={`w-full flex items-center gap-3 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
+              theme === 'aero'
+                ? 'bg-sky-500/15 border-sky-400/40 text-sky-700 dark:text-sky-300 hover:bg-sky-500/25'
+                : theme === 'dark'
                 ? 'bg-slate-800 border-slate-700 text-amber-300 hover:bg-slate-700'
                 : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
             } ${sidebarCollapsed ? 'justify-center px-0' : 'px-3'}`}
-            title={theme === 'dark' ? 'Mudar para Tema Claro' : 'Mudar para Tema Escuro'}
+            title={
+              theme === 'aero'
+                ? 'Tema Windows 7 Aero (Clique para alternar para Claro)'
+                : theme === 'dark'
+                ? 'Tema Escuro (Clique para alternar para Windows 7 Aero)'
+                : 'Tema Claro (Clique para alternar para Escuro)'
+            }
           >
-            {theme === 'dark' ? <Sun className="w-4 h-4 min-w-4 text-amber-400 shrink-0" /> : <Moon className="w-4 h-4 min-w-4 text-indigo-500 shrink-0" />}
+            {theme === 'aero' ? (
+              <Sparkles className="w-4 h-4 min-w-4 text-sky-500 shrink-0 animate-pulse" />
+            ) : theme === 'dark' ? (
+              <Sun className="w-4 h-4 min-w-4 text-amber-400 shrink-0" />
+            ) : (
+              <Moon className="w-4 h-4 min-w-4 text-indigo-500 shrink-0" />
+            )}
             {!sidebarCollapsed && (
-              <span>{theme === 'dark' ? 'Tema Escuro' : 'Tema Claro (Padrão)'}</span>
+              <span>
+                {theme === 'aero'
+                  ? 'Windows 7 (Aero)'
+                  : theme === 'dark'
+                  ? 'Tema Escuro'
+                  : 'Tema Claro (Padrão)'}
+              </span>
             )}
           </button>
 
@@ -1024,8 +1045,12 @@ export default function HomePage() {
               className="flex items-center gap-2.5 truncate cursor-pointer text-left flex-1 hover:opacity-80 transition"
               title="Meu Perfil & Conta (Clique para abrir)"
             >
-              <div className="w-8 h-8 min-w-8 rounded-full bg-emerald-500 text-slate-950 font-bold flex items-center justify-center text-xs shadow-sm shrink-0">
-                {(currentUser?.name || 'L').slice(0, 1).toUpperCase()}
+              <div className="w-8 h-8 min-w-8 rounded-full bg-emerald-500 text-slate-950 font-bold flex items-center justify-center text-xs shadow-sm shrink-0 overflow-hidden">
+                {currentUser?.avatar ? (
+                  <img src={currentUser.avatar} alt={currentUser.name} className="w-full h-full object-cover" />
+                ) : (
+                  (currentUser?.name || 'L').slice(0, 1).toUpperCase()
+                )}
               </div>
               {!sidebarCollapsed && (
                 <div className="truncate text-left">
@@ -2191,6 +2216,8 @@ export default function HomePage() {
               paymentMethods={paymentMethods}
               onRefreshData={loadInitialData}
               initialSection={managerSection}
+              currentTheme={theme}
+              onThemeChange={applyTheme}
             />
           )}
 

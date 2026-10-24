@@ -170,8 +170,12 @@ export function TransferRecognitionModal({
             {/* Quem enviou */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-800/80">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-center text-sm border border-emerald-500/30">
-                  {(currentItem.sender?.name || 'C').slice(0, 1).toUpperCase()}
+                <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold flex items-center justify-center text-sm border border-emerald-500/30 overflow-hidden">
+                  {currentItem.sender?.avatar ? (
+                    <img src={currentItem.sender.avatar} alt={currentItem.sender.name} className="w-full h-full object-cover" />
+                  ) : (
+                    (currentItem.sender?.name || 'C').slice(0, 1).toUpperCase()
+                  )}
                 </div>
                 <div>
                   <span className="text-xs text-slate-400 block font-medium">De</span>

@@ -189,7 +189,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(400).send({ error: parseResult.error.format() });
     }
 
-    const { name, email, currentPassword, newPassword } = parseResult.data;
+    const { name, email, currentPassword, newPassword, avatar } = parseResult.data;
 
     const user = await prisma.user.findUnique({
       where: { id: payload.id },
@@ -200,6 +200,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const updateData: any = {};
+
+    if (avatar !== undefined) {
+      updateData.avatar = avatar;
+    }
 
     if (name && name.trim()) {
       updateData.name = name.trim();

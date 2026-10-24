@@ -26,6 +26,7 @@ export const peopleRoutes: FastifyPluginAsync = async (app) => {
             id: true,
             name: true,
             email: true,
+            avatar: true,
           },
         },
         transactions: {

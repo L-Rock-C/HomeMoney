@@ -422,6 +422,7 @@ export async function settleDebt(personId: string, data: { accountId: string; am
 export async function updateUserProfile(data: {
   name?: string;
   email?: string;
+  avatar?: string | null;
   currentPassword?: string;
   newPassword?: string;
 }) {

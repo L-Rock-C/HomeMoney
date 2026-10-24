@@ -207,8 +207,12 @@ export function PeopleTableView({
                     {/* Contato (Avatar + Nome + Notas) */}
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold flex items-center justify-center text-xs shrink-0">
-                          {p.name.slice(0, 2).toUpperCase()}
+                        <div className="w-8 h-8 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold flex items-center justify-center text-xs shrink-0 overflow-hidden">
+                          {p.linkedUser?.avatar ? (
+                            <img src={p.linkedUser.avatar} alt={p.name} className="w-full h-full object-cover" />
+                          ) : (
+                            p.name.slice(0, 2).toUpperCase()
+                          )}
                         </div>
                         <div className="min-w-0">
                           <span className="font-bold text-slate-900 dark:text-white block truncate">
@@ -351,8 +355,12 @@ export function PeopleTableView({
                 className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 active:scale-[0.99] transition cursor-pointer"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-9 h-9 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold flex items-center justify-center text-xs shrink-0">
-                    {p.name.slice(0, 2).toUpperCase()}
+                  <div className="w-9 h-9 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-bold flex items-center justify-center text-xs shrink-0 overflow-hidden">
+                    {p.linkedUser?.avatar ? (
+                      <img src={p.linkedUser.avatar} alt={p.name} className="w-full h-full object-cover" />
+                    ) : (
+                      p.name.slice(0, 2).toUpperCase()
+                    )}
                   </div>
 
                   <div className="min-w-0 flex-1">
