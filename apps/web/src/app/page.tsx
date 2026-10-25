@@ -423,7 +423,7 @@ export default function HomePage() {
       document.documentElement.classList.add('dark');
     } else if (newTheme === 'aero') {
       document.documentElement.classList.add('theme-aero');
-      const savedWp = localStorage.getItem('homemoney-aero-wallpaper') || 'aero-sky';
+      const savedWp = localStorage.getItem('homemoney-aero-wallpaper') || 'aero-harmony';
       document.documentElement.style.setProperty('--aero-bg-image', `url('/wallpapers/${savedWp}.png')`);
     }
   }
@@ -1004,9 +1004,9 @@ export default function HomePage() {
             } ${sidebarCollapsed ? 'justify-center px-0' : 'px-3'}`}
             title={
               theme === 'aero'
-                ? 'Tema Windows 7 Aero (Clique para alternar para Claro)'
+                ? 'Tema Aero (Clique para alternar para Claro)'
                 : theme === 'dark'
-                ? 'Tema Escuro (Clique para alternar para Windows 7 Aero)'
+                ? 'Tema Escuro (Clique para alternar para Aero)'
                 : 'Tema Claro (Clique para alternar para Escuro)'
             }
           >
@@ -1020,7 +1020,7 @@ export default function HomePage() {
             {!sidebarCollapsed && (
               <span>
                 {theme === 'aero'
-                  ? 'Windows 7 (Aero)'
+                  ? 'Aero'
                   : theme === 'dark'
                   ? 'Tema Escuro'
                   : 'Tema Claro (Padrão)'}

@@ -43,7 +43,7 @@ export default function LoginPage() {
       document.documentElement.classList.add('dark');
     } else if (newTheme === 'aero') {
       document.documentElement.classList.add('theme-aero');
-      const savedWp = localStorage.getItem('homemoney-aero-wallpaper') || 'aero-sky';
+      const savedWp = localStorage.getItem('homemoney-aero-wallpaper') || 'aero-harmony';
       document.documentElement.style.setProperty('--aero-bg-image', `url('/wallpapers/${savedWp}.png')`);
     }
   }
@@ -128,9 +128,9 @@ export default function LoginPage() {
           className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:border-emerald-500 transition shadow-sm cursor-pointer"
           title={
             theme === 'aero'
-              ? 'Tema Windows 7 Aero (Clique para alternar para Claro)'
+              ? 'Tema Aero (Clique para alternar para Claro)'
               : theme === 'dark'
-              ? 'Tema Escuro (Clique para alternar para Windows 7 Aero)'
+              ? 'Tema Escuro (Clique para alternar para Aero)'
               : 'Tema Claro (Clique para alternar para Escuro)'
           }
         >

@@ -67,9 +67,9 @@ export function ManagerView({
 
   const [aeroWallpaper, setAeroWallpaper] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('homemoney-aero-wallpaper') || 'aero-sky';
+      return localStorage.getItem('homemoney-aero-wallpaper') || 'aero-harmony';
     }
-    return 'aero-sky';
+    return 'aero-harmony';
   });
 
   function handleAeroWallpaperChange(wp: string, e?: React.MouseEvent) {
@@ -645,7 +645,7 @@ export function ManagerView({
       )}
 
       {/* ========================================================================= */}
-      {/* SECTION 3: Temas & Estilos (Claro, Escuro, Windows 7 Frutiger Aero)       */}
+      {/* SECTION 3: Temas & Estilos (Claro, Escuro, Aero)                           */}
       {/* ========================================================================= */}
       {activeSection === 'THEMES' && (
         <div className="space-y-6 animate-in fade-in duration-200">
@@ -758,7 +758,7 @@ export function ManagerView({
               </div>
             </div>
 
-            {/* Tema 3: Windows 7 / Frutiger Aero */}
+            {/* Tema 3: Aero */}
             <div
               onClick={() => onThemeChange && onThemeChange('aero')}
               className={`p-5 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between relative group overflow-hidden ${
@@ -778,21 +778,21 @@ export function ManagerView({
               )}
 
               <div>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#1976d2] via-[#29b6f6] to-[#80d8ff] flex items-center justify-center text-white mb-4 shadow-md border border-white/80">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#0284c7] via-[#06b6d4] to-[#10b981] flex items-center justify-center text-white mb-4 shadow-md border border-white/80">
                   <Sparkles className="w-6 h-6 text-white animate-pulse" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white">Windows 7 (Frutiger Aero)</h4>
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white">Aero</h4>
                   <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-400/30">
                     AERO
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                  Estética Frutiger Aero luminosa: paleta em azul celeste radiante, auroras com toques orgânicos e efeito Aero Glass com translucidez cristalina (vidro jateado).
+                  Estética Aero vibrante e colorida: degradês intensos de turquesa e azul celeste, auroras orgânicas em verde e ouro, e efeito Aero Glass cristalino com alta translucidez.
                 </p>
 
                 {/* Visual Preview: Miniature Radiant Aero Desktop with Translucent Aero Window & Superbar */}
-                <div className="mt-4 p-3 rounded-xl bg-gradient-to-br from-[#1565c0] via-[#1e88e5] to-[#42a5f5] border border-sky-300/40 shadow-inner space-y-2 relative overflow-hidden">
+                <div className="mt-4 p-3 rounded-xl bg-gradient-to-br from-[#0284c7] via-[#0d9488] to-[#10b981] border border-sky-300/40 shadow-inner space-y-2 relative overflow-hidden">
                   {/* Subtle Aurora light beam and organic green ambient glow */}
                   <div className="absolute inset-0 bg-radial from-white/30 via-emerald-400/20 to-transparent pointer-events-none"></div>
 
@@ -842,9 +842,9 @@ export function ManagerView({
                     </p>
                     <div className="grid grid-cols-3 gap-2">
                       {[
-                        { id: 'aero-sky', name: 'Céu Celeste', img: '/wallpapers/aero-sky.png' },
-                        { id: 'aero-teal', name: 'Aurora Teal', img: '/wallpapers/aero-teal.png' },
                         { id: 'aero-harmony', name: 'Harmonia', img: '/wallpapers/aero-harmony.png' },
+                        { id: 'aero-teal', name: 'Aurora Teal', img: '/wallpapers/aero-teal.png' },
+                        { id: 'aero-sky', name: 'Céu Celeste', img: '/wallpapers/aero-sky.png' },
                       ].map((wp) => (
                         <button
                           key={wp.id}
@@ -879,7 +879,7 @@ export function ManagerView({
                       : 'bg-sky-500/10 text-sky-700 dark:text-sky-300 hover:bg-sky-500/20 border border-sky-500/30'
                   }`}
                 >
-                  {currentTheme === 'aero' ? 'Tema Ativo' : 'Ativar Windows 7 Aero'}
+                  {currentTheme === 'aero' ? 'Tema Ativo' : 'Ativar Aero'}
                 </button>
               </div>
             </div>
