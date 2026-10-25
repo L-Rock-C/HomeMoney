@@ -68,58 +68,66 @@ body {
 
 /* ========================================================================= */
 /* Aero Theme - Modern Frutiger Aero Glassmorphism                          */
-/* Paleta Vibrante, Colorida, Auroras e Alta Translucidez Cristalina         */
+/* Paleta Bem Azul (Windows 7 Harmony), Tela Inteira e Cards Translúcidos    */
 /* ========================================================================= */
 .theme-aero {
-  --background: #024b86;
-  --foreground: #041d38;
+  --background: #005bb5;
+  --foreground: #021a36;
   color-scheme: light;
 }
 
-/* 1. Desktop Wallpaper Luminoso e Saturado (Harmonia Turquesa, Verde e Ouro) */
+/* 1. Wallpaper da Tela Inteira (Fundo Completo do Programa) */
+.theme-aero,
+html.theme-aero,
+body.theme-aero,
 .theme-aero body {
-  background-color: #024b86 !important;
-  background-image: var(--aero-bg-image, url('/wallpapers/aero-harmony.png')) !important;
+  background-color: #005bb5 !important;
+  background-image: var(--aero-bg-image, url('/wallpapers/aero-blue.jpg')) !important;
   background-size: cover !important;
   background-position: center center !important;
   background-attachment: fixed !important;
   background-repeat: no-repeat !important;
-  color: #041d38 !important;
+  min-height: 100vh !important;
+  width: 100% !important;
+  color: #021a36 !important;
   font-family: 'Segoe UI', Tahoma, system-ui, -apple-system, sans-serif !important;
-  position: relative;
-  min-height: 100vh;
 }
 
-/* Auroras Coloridas de Luz Difusa (Ciano, Esmeralda e Âmbar) */
-.theme-aero body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background: 
-    radial-gradient(ellipse 1000px 650px at 50% 15%, rgba(0, 195, 255, 0.16) 0%, transparent 60%),
-    radial-gradient(circle 600px at 15% 85%, rgba(16, 185, 129, 0.20) 0%, transparent 60%),
-    radial-gradient(circle 500px at 85% 80%, rgba(245, 158, 11, 0.15) 0%, transparent 60%);
-  z-index: 0;
+/* Garante que os wrappers da página e layout sejam 100% transparentes para revelar o wallpaper na tela inteira */
+.theme-aero body > div,
+.theme-aero .min-h-screen,
+.theme-aero [class*="min-h-screen"],
+.theme-aero div[class*="bg-slate-50"][class*="min-h-screen"],
+.theme-aero div[class*="dark:bg-slate-950"][class*="min-h-screen"],
+.theme-aero main {
+  background-color: transparent !important;
+  background: transparent !important;
 }
 
-/* Fitas e Ondas Luminosas Fluindo pelo Fundo (Reflexo Especular Suave) */
+/* Grids e wrappers de layout interno transparentes para que os cards flutuem individualmente */
+.theme-aero main > div.grid,
+.theme-aero main .grid,
+.theme-aero main > div[class*="grid"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Desabilita pseudo-elementos sobrepostos para não desbotar o papel de parede original */
+.theme-aero body::before,
 .theme-aero body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(125deg, transparent 30%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.04) 55%, transparent 70%);
-  z-index: 0;
+  display: none !important;
 }
 
 /* 2. Barra Lateral Translúcida (Aero Glass Superbar / Sidebar) */
 .theme-aero aside {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(185, 230, 255, 0.22) 50%, rgba(120, 200, 255, 0.28) 100%) !important;
-  backdrop-filter: blur(28px) saturate(220%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(220%) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.55) !important;
-  box-shadow: 4px 0 28px rgba(0, 30, 80, 0.14), inset -1px 0 0 rgba(255, 255, 255, 0.45) !important;
+  background: rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(28px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.65) !important;
+  box-shadow: 4px 0 30px rgba(0, 35, 90, 0.16), inset -1px 0 0 rgba(255, 255, 255, 0.45) !important;
   z-index: 40;
 }
 
@@ -143,9 +151,9 @@ body {
 }
 
 .theme-aero aside nav button:hover {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(200, 240, 255, 0.38) 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.75) !important;
-  box-shadow: 0 4px 12px rgba(0, 60, 140, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+  background: rgba(255, 255, 255, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 0 4px 14px rgba(0, 60, 140, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
   color: #005bb5 !important;
 }
 
@@ -154,8 +162,8 @@ body {
 .theme-aero aside nav button[class*="bg-emerald"],
 .theme-aero aside nav button[class*="bg-emerald-500"] {
   background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.85) !important;
-  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.4), inset 0 1px 0 #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 4px 18px rgba(2, 132, 199, 0.45), inset 0 1px 0 #ffffff !important;
   color: #ffffff !important;
   font-weight: 700 !important;
   text-shadow: 0 1px 2px rgba(0, 20, 50, 0.5) !important;
@@ -163,52 +171,52 @@ body {
 
 /* 3. Cabeçalho Aero Glass (Header) */
 .theme-aero header {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(200, 235, 255, 0.28) 100%) !important;
-  backdrop-filter: blur(24px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.55) !important;
-  box-shadow: 0 4px 24px rgba(0, 30, 80, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
+  background: rgba(255, 255, 255, 0.50) !important;
+  backdrop-filter: blur(25px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(25px) saturate(190%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.7) !important;
+  box-shadow: 0 4px 25px rgba(0, 35, 90, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
 
 .theme-aero header h2,
 .theme-aero header h1 {
-  color: #041d38 !important;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+  color: #021a36 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9) !important;
 }
 
-/* 4. Cartões e Painéis Principais (Translucidez Real com Aero Glass - NÃO BRANCO OPACO) */
-.theme-aero .bg-white,
-.theme-aero .dark\:bg-slate-900\/40,
-.theme-aero .dark\:bg-slate-900,
-.theme-aero .dark\:bg-slate-950,
-.theme-aero .bg-slate-900\/50,
-.theme-aero main > div,
+/* 4. Cartões e Painéis Principais (Translucidez Real com Aero Glass sobre o Wallpaper Azul) */
 .theme-aero .p-5.rounded-2xl,
 .theme-aero .p-6.rounded-2xl,
 .theme-aero .p-4.rounded-2xl,
 .theme-aero .rounded-2xl.border,
 .theme-aero .rounded-3xl.border,
-.theme-aero .rounded-xl.border {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.38) 0%, rgba(210, 240, 255, 0.24) 50%, rgba(150, 215, 255, 0.30) 100%) !important;
-  backdrop-filter: blur(28px) saturate(220%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(220%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.60) !important;
-  box-shadow: 0 16px 40px rgba(0, 30, 80, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 0 16px rgba(135, 206, 250, 0.20) !important;
-  color: #041d38 !important;
+.theme-aero .rounded-xl.border,
+.theme-aero .bg-white:not(button):not(input):not(select):not(body),
+.theme-aero .dark\:bg-slate-900:not(button):not(input):not(select):not(body),
+.theme-aero div[class*="bg-white/"]:not(button):not(input):not(select),
+.theme-aero div[class*="dark:bg-slate-900/"]:not(button):not(input):not(select) {
+  background: rgba(255, 255, 255, 0.48) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.75) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 16px 40px rgba(0, 30, 80, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 0 14px rgba(255, 255, 255, 0.15) !important;
+  color: #021a36 !important;
 }
 
 /* Subcartões Internos (KPIs, Carteiras, Métricas e Listas) */
-.theme-aero .bg-slate-50,
-.theme-aero .bg-slate-100,
-.theme-aero .dark\:bg-slate-800\/40,
-.theme-aero .dark\:bg-slate-800\/50,
-.theme-aero .dark\:bg-slate-800 {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(225, 245, 255, 0.28) 100%) !important;
-  backdrop-filter: blur(18px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(200%) !important;
+.theme-aero main .bg-slate-50,
+.theme-aero main .bg-slate-100,
+.theme-aero main .dark\:bg-slate-800\/40,
+.theme-aero main .dark\:bg-slate-800\/50,
+.theme-aero main .dark\:bg-slate-800 {
+  background: rgba(255, 255, 255, 0.38) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
   border: 1px solid rgba(255, 255, 255, 0.65) !important;
-  box-shadow: 0 4px 16px rgba(0, 30, 80, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
-  color: #041d38 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 4px 14px rgba(0, 30, 80, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
+  color: #021a36 !important;
 }
 
 /* 5. Tabelas e Detalhes de Transações */
@@ -217,28 +225,28 @@ body {
 }
 
 .theme-aero table thead {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(200, 235, 255, 0.45) 100%) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.6) !important;
+  background: rgba(255, 255, 255, 0.70) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.7) !important;
 }
 
 .theme-aero table thead th {
-  color: #032247 !important;
+  color: #021a36 !important;
   font-weight: 700 !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.4) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.45) !important;
 }
 
 .theme-aero table tbody tr {
-  background: rgba(255, 255, 255, 0.22) !important;
+  background: rgba(255, 255, 255, 0.35) !important;
   transition: all 0.15s ease !important;
 }
 
 .theme-aero table tbody tr:nth-child(even) {
-  background: rgba(215, 240, 255, 0.14) !important;
+  background: rgba(230, 245, 255, 0.25) !important;
 }
 
 .theme-aero table tbody tr:hover {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(186, 230, 253, 0.50) 100%) !important;
-  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.6), 0 4px 12px rgba(2, 132, 199, 0.15) !important;
+  background: rgba(255, 255, 255, 0.75) !important;
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.6), 0 4px 14px rgba(2, 132, 199, 0.18) !important;
 }
 
 /* 6. Menus Suspensos, Selects e Menus de Contexto */
@@ -246,12 +254,12 @@ body {
 .theme-aero select option,
 .theme-aero [role="menu"],
 .theme-aero .dropdown-menu {
-  background: rgba(255, 255, 255, 0.88) !important;
+  background: rgba(255, 255, 255, 0.90) !important;
   backdrop-filter: blur(28px) saturate(200%) !important;
   -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.85) !important;
-  box-shadow: 0 16px 40px rgba(0, 25, 60, 0.18), inset 0 1px 0 #ffffff !important;
-  color: #041d38 !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 16px 45px rgba(0, 25, 60, 0.2), inset 0 1px 0 #ffffff !important;
+  color: #021a36 !important;
 }
 
 /* Destaque Ouro/Âmbar nos itens de menu */
@@ -267,17 +275,17 @@ body {
 .theme-aero [role="dialog"] > div,
 .theme-aero .fixed.inset-0 > div.bg-white,
 .theme-aero .fixed.inset-0 > div.dark\:bg-slate-900 {
-  background: linear-gradient(180deg, rgba(240, 250, 255, 0.75) 0%, rgba(215, 242, 255, 0.65) 46px, rgba(248, 252, 255, 0.70) 47px, rgba(255, 255, 255, 0.80) 100%) !important;
+  background: rgba(255, 255, 255, 0.80) !important;
   backdrop-filter: blur(32px) saturate(220%) !important;
   -webkit-backdrop-filter: blur(32px) saturate(220%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.85) !important;
-  border-radius: 20px !important;
-  box-shadow: 0 24px 70px rgba(0, 30, 80, 0.30), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.92) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 24px 75px rgba(0, 30, 80, 0.35), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
 }
 
 .theme-aero .fixed.inset-0.bg-black\/50,
 .theme-aero .fixed.inset-0.bg-slate-950\/80 {
-  background-color: rgba(5, 30, 65, 0.40) !important;
+  background-color: rgba(3, 30, 70, 0.45) !important;
   backdrop-filter: blur(10px) !important;
 }
 
@@ -315,9 +323,9 @@ body {
 .theme-aero button.border-slate-200,
 .theme-aero button.bg-slate-100,
 .theme-aero button.dark\:bg-slate-800 {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0%, rgba(220, 240, 255, 0.45) 100%) !important;
+  background: rgba(255, 255, 255, 0.65) !important;
   color: #0c2b4d !important;
-  border: 1px solid rgba(255, 255, 255, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
   border-radius: 12px !important;
   box-shadow: inset 0 1px 0 #ffffff, 0 2px 8px rgba(0, 30, 80, 0.08) !important;
   font-weight: 600 !important;
@@ -326,7 +334,7 @@ body {
 
 .theme-aero button.border-slate-200:hover,
 .theme-aero button.bg-slate-100:hover {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(200, 235, 255, 0.65) 100%) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
   border-color: #38bdf8 !important;
   box-shadow: inset 0 1px 0 #ffffff, 0 0 14px rgba(56, 189, 248, 0.45) !important;
   color: #0284c7 !important;
@@ -335,16 +343,16 @@ body {
 /* 9. Entradas de Formulário (Inputs Translúcidos com Anel Celeste) */
 .theme-aero input,
 .theme-aero textarea {
-  background: rgba(255, 255, 255, 0.55) !important;
-  color: #041d38 !important;
-  border: 1px solid rgba(255, 255, 255, 0.70) !important;
+  background: rgba(255, 255, 255, 0.65) !important;
+  color: #021a36 !important;
+  border: 1px solid rgba(255, 255, 255, 0.75) !important;
   border-radius: 10px !important;
   box-shadow: inset 0 1px 2px rgba(0, 30, 80, 0.06), 0 1px 0 rgba(255, 255, 255, 0.8) !important;
 }
 
 .theme-aero input:focus,
 .theme-aero textarea:focus {
-  background: rgba(255, 255, 255, 0.85) !important;
+  background: rgba(255, 255, 255, 0.90) !important;
   border-color: #0284c7 !important;
   box-shadow: 0 0 14px rgba(2, 132, 199, 0.5), inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
   outline: none !important;
@@ -355,14 +363,14 @@ body {
 .theme-aero h2, 
 .theme-aero h3, 
 .theme-aero h4 {
-  color: #041d38 !important;
+  color: #021a36 !important;
   font-weight: 700 !important;
 }
 
 .theme-aero p, 
 .theme-aero span, 
 .theme-aero label {
-  color: #123456;
+  color: #0f2e52;
 }
 
 .theme-aero .text-slate-400,

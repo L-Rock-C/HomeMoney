@@ -423,8 +423,9 @@ export default function HomePage() {
       document.documentElement.classList.add('dark');
     } else if (newTheme === 'aero') {
       document.documentElement.classList.add('theme-aero');
-      const savedWp = localStorage.getItem('homemoney-aero-wallpaper') || 'aero-harmony';
-      document.documentElement.style.setProperty('--aero-bg-image', `url('/wallpapers/${savedWp}.png')`);
+      const savedWp = localStorage.getItem('homemoney-aero-wallpaper') || 'aero-blue';
+      const url = savedWp === 'aero-waves' ? '/wallpapers/aero-waves.jpg' : savedWp === 'aero-sky' ? '/wallpapers/aero-sky.png' : savedWp === 'aero-teal' ? '/wallpapers/aero-teal.png' : '/wallpapers/aero-blue.jpg';
+      document.documentElement.style.setProperty('--aero-bg-image', `url('${url}')`);
     }
   }
 

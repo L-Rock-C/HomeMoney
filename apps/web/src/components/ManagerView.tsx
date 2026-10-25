@@ -67,9 +67,9 @@ export function ManagerView({
 
   const [aeroWallpaper, setAeroWallpaper] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('homemoney-aero-wallpaper') || 'aero-harmony';
+      return localStorage.getItem('homemoney-aero-wallpaper') || 'aero-blue';
     }
-    return 'aero-harmony';
+    return 'aero-blue';
   });
 
   function handleAeroWallpaperChange(wp: string, e?: React.MouseEvent) {
@@ -77,7 +77,8 @@ export function ManagerView({
     setAeroWallpaper(wp);
     if (typeof window !== 'undefined') {
       localStorage.setItem('homemoney-aero-wallpaper', wp);
-      document.documentElement.style.setProperty('--aero-bg-image', `url('/wallpapers/${wp}.png')`);
+      const url = wp === 'aero-waves' ? '/wallpapers/aero-waves.jpg' : wp === 'aero-sky' ? '/wallpapers/aero-sky.png' : wp === 'aero-teal' ? '/wallpapers/aero-teal.png' : '/wallpapers/aero-blue.jpg';
+      document.documentElement.style.setProperty('--aero-bg-image', `url('${url}')`);
     }
   }
 
@@ -837,30 +838,31 @@ export function ManagerView({
                     <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center justify-between">
                       <span>Papel de Parede Aero:</span>
                       <span className="text-[10px] text-sky-600 dark:text-sky-300 font-semibold">
-                        {aeroWallpaper === 'aero-teal' ? 'Aurora Aquamarine' : aeroWallpaper === 'aero-harmony' ? 'Harmonia Turquesa' : 'Céu Celeste'}
+                        {aeroWallpaper === 'aero-waves' ? 'Ondas Azuis' : aeroWallpaper === 'aero-sky' ? 'Céu Celeste' : aeroWallpaper === 'aero-teal' ? 'Aurora Teal' : 'Windows 7 Harmony (Azul)'}
                       </span>
                     </p>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {[
-                        { id: 'aero-harmony', name: 'Harmonia', img: '/wallpapers/aero-harmony.png' },
-                        { id: 'aero-teal', name: 'Aurora Teal', img: '/wallpapers/aero-teal.png' },
+                        { id: 'aero-blue', name: 'Windows 7 Harmony', img: '/wallpapers/aero-blue.jpg' },
+                        { id: 'aero-waves', name: 'Ondas Azuis', img: '/wallpapers/aero-waves.jpg' },
                         { id: 'aero-sky', name: 'Céu Celeste', img: '/wallpapers/aero-sky.png' },
+                        { id: 'aero-teal', name: 'Aurora Teal', img: '/wallpapers/aero-teal.png' },
                       ].map((wp) => (
                         <button
                           key={wp.id}
                           type="button"
                           onClick={(e) => handleAeroWallpaperChange(wp.id, e)}
                           className={`group relative rounded-lg overflow-hidden border-2 transition-all p-0.5 cursor-pointer h-12 ${
-                            aeroWallpaper === wp.id
+                            aeroWallpaper === wp.id || (!aeroWallpaper && wp.id === 'aero-blue')
                               ? 'border-sky-500 ring-2 ring-sky-400 shadow-md scale-[1.02]'
                               : 'border-white/80 hover:border-sky-300 opacity-80 hover:opacity-100'
                           }`}
                           title={wp.name}
                         >
                           <img src={wp.img} alt={wp.name} className="w-full h-full object-cover rounded-md" />
-                          {aeroWallpaper === wp.id && (
-                            <div className="absolute inset-0 bg-sky-500/20 flex items-center justify-center">
-                              <span className="w-2 h-2 rounded-full bg-white shadow-xs"></span>
+                          {(aeroWallpaper === wp.id || (!aeroWallpaper && wp.id === 'aero-blue')) && (
+                            <div className="absolute inset-0 bg-sky-500/25 flex items-center justify-center">
+                              <span className="w-2.5 h-2.5 rounded-full bg-white shadow-xs"></span>
                             </div>
                           )}
                         </button>
