@@ -1814,23 +1814,23 @@ export default function HomePage() {
               <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 overflow-hidden shadow-sm w-full max-w-full">
                 {/* Desktop View: Full 8-column Table */}
                 <div className="hidden md:block overflow-x-auto w-full max-w-full">
-                  <table className="w-full text-left text-sm min-w-[700px]">
+                  <table className="w-full text-left text-sm min-w-[850px]">
                     <thead className="bg-slate-50 dark:bg-slate-900/80 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
                       <tr>
-                        <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4">Vencimento</th>
-                        <th className="py-3 px-4">Descrição</th>
-                        <th className="py-3 px-4">Categoria</th>
-                        <th className="py-3 px-4">Carteira / Método</th>
-                        <th className="py-3 px-4">Terceiro</th>
-                        <th className="py-3 px-4 text-right">Valor</th>
-                        <th className="py-3 px-4 text-center">Ações</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Status</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Vencimento</th>
+                        <th className="py-3 px-4 min-w-[180px]">Descrição</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Categoria</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Carteira / Método</th>
+                        <th className="py-3 px-4 whitespace-nowrap">Terceiro</th>
+                        <th className="py-3 px-4 text-right whitespace-nowrap">Valor</th>
+                        <th className="py-3 px-4 text-center whitespace-nowrap">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
                       {filteredTransactions.map((t) => (
                         <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 whitespace-nowrap">
                             <button
                               onClick={() => handleTogglePaid(t.id)}
                               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition ${
@@ -1857,24 +1857,24 @@ export default function HomePage() {
                             <div className="flex items-center gap-2">
                               <span>{t.description}</span>
                               {t.totalInstallments && t.totalInstallments > 1 && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono shrink-0">
                                   {t.currentInstallment}/{t.totalInstallments}
                                 </span>
                               )}
                             </div>
                             {t.notes && <p className="text-xs text-slate-400 mt-0.5">{t.notes}</p>}
                           </td>
-                          <td className="py-3 px-4">
-                            <span className="text-xs px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/50">
-                              {t.category?.name}
+                          <td className="py-3 px-4 whitespace-nowrap">
+                            <span className="inline-flex items-center whitespace-nowrap text-xs px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/50 font-medium">
+                              {t.category?.name || 'Geral'}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
                             <span className="font-medium text-slate-700 dark:text-slate-300">{t.account?.name}</span> • {t.paymentMethod}
                           </td>
-                          <td className="py-3 px-4 text-xs text-slate-500 dark:text-slate-400">
+                          <td className="py-3 px-4 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
                             {t.person ? (
-                              <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 font-medium">
+                              <span className="inline-flex items-center whitespace-nowrap px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 font-medium">
                                 {t.person.name}
                               </span>
                             ) : (
@@ -1890,7 +1890,7 @@ export default function HomePage() {
                           >
                             {t.type === 'INCOME' ? '+' : '-'} {formatBRL(t.amount)}
                           </td>
-                          <td className="py-3 px-4 text-center">
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
                             <div className="flex items-center justify-center gap-1">
                               <button
                                 onClick={() => handleOpenEdit(t)}
