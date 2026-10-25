@@ -420,7 +420,7 @@ export const SelectDropdown = React.forwardRef<HTMLButtonElement, SelectDropdown
         )}
 
         {/* Input oculto para formulários padrão */}
-        <input type="hidden" name={name} value={stringValue} />
+        <input type="hidden" hidden name={name} value={stringValue} />
 
         {/* Botão de Trigger Customizado */}
         <button

@@ -1381,25 +1381,21 @@ export default function HomePage() {
                   <ChevronLeft className="w-4 h-4" />
                 </button>
 
-                {/* Caixa de Seleção de Mês e Ano (ex: jan/2026) */}
-                <div className="relative inline-flex items-center min-w-[160px] sm:min-w-[190px]">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-600 dark:text-emerald-400">
-                    <Calendar className="w-4 h-4" />
-                  </div>
-                  <select
+                {/* Caixa de Seleção Padrão do Projeto (SelectDropdown) */}
+                <div className="w-[170px] sm:w-[195px]">
+                  <SelectDropdown
                     value={selectedMonth}
                     onChange={(e) => handleMonthSelect(e.target.value)}
-                    className="w-full appearance-none pl-9 pr-9 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white shadow-xs hover:border-emerald-500/50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none transition cursor-pointer"
+                    leftIcon={<Calendar className="w-4 h-4 text-emerald-500" />}
+                    className="py-2 px-3 text-xs sm:text-sm font-semibold"
+                    placeholder="Selecione o mês"
                   >
                     {Array.from(new Set([...availableMonths, selectedMonth])).sort().map((m) => (
-                      <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white py-1">
+                      <option key={m} value={m}>
                         {formatMonthYearLabel(m)}
                       </option>
                     ))}
-                  </select>
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                    <ChevronDown className="w-4 h-4" />
-                  </div>
+                  </SelectDropdown>
                 </div>
 
                 {/* Botão Próximo Mês */}
