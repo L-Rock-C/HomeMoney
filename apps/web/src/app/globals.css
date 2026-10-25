@@ -14,9 +14,19 @@
   color-scheme: dark;
 }
 
+select option {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
 .dark select option {
   background-color: #0f172a;
   color: #f1f5f9;
+}
+
+.theme-aero select option {
+  background-color: #ffffff;
+  color: #0f172a;
 }
 
 html {

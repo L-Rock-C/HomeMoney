@@ -92,6 +92,24 @@ const getCurrentMonthKey = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 };
 
+const MONTH_NAMES_SHORT = [
+  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+  'jul', 'ago', 'set', 'out', 'nov', 'dez'
+];
+
+const formatMonthYearLabel = (monthKey: string) => {
+  if (!monthKey) return '';
+  const parts = monthKey.split('-');
+  if (parts.length === 2) {
+    const year = parts[0];
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    if (monthIdx >= 0 && monthIdx < 12) {
+      return `${MONTH_NAMES_SHORT[monthIdx]}/${year}`;
+    }
+  }
+  return monthKey;
+};
+
 // ============================================================================
 // Local Persistence Cache (Stale-While-Revalidate com isolamento por usuário)
 // ============================================================================
@@ -188,7 +206,10 @@ export default function HomePage() {
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey());
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [availableMonths, setAvailableMonths] = useState<string[]>(() => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 12 }, (_, i) => `${currentYear}-${String(i + 1).padStart(2, '0')}`);
+  });
 
   // Search & Type Filters
   const [search, setSearch] = useState('');
@@ -455,7 +476,9 @@ export default function HomePage() {
 
       const months = monthsData.map((m: any) => m.month);
       const currentM = getCurrentMonthKey();
-      const allMonths = Array.from(new Set([...months, currentM])).sort();
+      const currentYear = new Date().getFullYear();
+      const currentYearMonths = Array.from({ length: 12 }, (_, i) => `${currentYear}-${String(i + 1).padStart(2, '0')}`);
+      const allMonths = Array.from(new Set([...currentYearMonths, ...months, currentM])).sort();
       setAvailableMonths(allMonths);
 
       const initialMonth = currentM;
@@ -548,7 +571,36 @@ export default function HomePage() {
     setFilterMode('MONTH');
     setStartDate('');
     setEndDate('');
+    if (!availableMonths.includes(month)) {
+      setAvailableMonths((prev) => Array.from(new Set([...prev, month])).sort());
+    }
     await fetchTransactionsForFilter(month, '', '');
+  }
+
+  function handlePrevMonth() {
+    const [yearStr, monthStr] = (selectedMonth || getCurrentMonthKey()).split('-');
+    let year = parseInt(yearStr, 10);
+    let month = parseInt(monthStr, 10);
+    month -= 1;
+    if (month < 1) {
+      month = 12;
+      year -= 1;
+    }
+    const prevMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+    handleMonthSelect(prevMonthKey);
+  }
+
+  function handleNextMonth() {
+    const [yearStr, monthStr] = (selectedMonth || getCurrentMonthKey()).split('-');
+    let year = parseInt(yearStr, 10);
+    let month = parseInt(monthStr, 10);
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+    const nextMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+    handleMonthSelect(nextMonthKey);
   }
 
   async function handleApplyDateRange() {
@@ -1318,23 +1370,59 @@ export default function HomePage() {
 
             {/* Filter Content */}
             {filterMode === 'MONTH' ? (
-              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 max-w-full scrollbar-none">
-                {availableMonths.map((m) => {
-                  const isSelected = selectedMonth === m;
-                  return (
-                    <button
-                      key={m}
-                      onClick={() => handleMonthSelect(m)}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border ${
-                        isSelected
-                          ? 'bg-emerald-500 text-white dark:text-slate-950 border-emerald-500 shadow-sm'
-                          : 'bg-slate-50 dark:bg-slate-950/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  );
-                })}
+              <div className="flex items-center gap-2 pt-1 flex-wrap">
+                {/* Botão Mês Anterior */}
+                <button
+                  type="button"
+                  onClick={handlePrevMonth}
+                  className="p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer shrink-0 shadow-xs active:scale-95"
+                  title="Mês anterior"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {/* Caixa de Seleção de Mês e Ano (ex: jan/2026) */}
+                <div className="relative inline-flex items-center min-w-[160px] sm:min-w-[190px]">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-emerald-600 dark:text-emerald-400">
+                    <Calendar className="w-4 h-4" />
+                  </div>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => handleMonthSelect(e.target.value)}
+                    className="w-full appearance-none pl-9 pr-9 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white shadow-xs hover:border-emerald-500/50 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none transition cursor-pointer"
+                  >
+                    {Array.from(new Set([...availableMonths, selectedMonth])).sort().map((m) => (
+                      <option key={m} value={m} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white py-1">
+                        {formatMonthYearLabel(m)}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                    <ChevronDown className="w-4 h-4" />
+                  </div>
+                </div>
+
+                {/* Botão Próximo Mês */}
+                <button
+                  type="button"
+                  onClick={handleNextMonth}
+                  className="p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer shrink-0 shadow-xs active:scale-95"
+                  title="Próximo mês"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+
+                {/* Atalho "Mês Atual" se o mês selecionado não for o atual */}
+                {selectedMonth !== getCurrentMonthKey() && (
+                  <button
+                    type="button"
+                    onClick={() => handleMonthSelect(getCurrentMonthKey())}
+                    className="px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition cursor-pointer"
+                    title="Voltar para o mês atual"
+                  >
+                    Hoje ({formatMonthYearLabel(getCurrentMonthKey())})
+                  </button>
+                )}
               </div>
             ) : (
               <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -1536,7 +1624,7 @@ export default function HomePage() {
                         Despesas por Categoria (Gráfico de Setores)
                       </h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Distribuição proporcional no período de {selectedMonth}
+                        Distribuição proporcional no período de {formatMonthYearLabel(selectedMonth)}
                       </p>
                     </div>
                     <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
@@ -1941,7 +2029,7 @@ export default function HomePage() {
                           m.month === selectedMonth ? 'bg-emerald-500/5' : ''
                         }`}
                       >
-                        <td className="py-3.5 px-4 font-sans font-semibold text-slate-900 dark:text-white">{m.month}</td>
+                        <td className="py-3.5 px-4 font-sans font-semibold text-slate-900 dark:text-white">{formatMonthYearLabel(m.month)}</td>
                         <td className="py-3.5 px-4 text-right text-emerald-600 dark:text-emerald-400">{formatBRL(m.totalIncome)}</td>
                         <td className="py-3.5 px-4 text-right text-rose-500">{formatBRL(m.totalExpense)}</td>
                         <td
