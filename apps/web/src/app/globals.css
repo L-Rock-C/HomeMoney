@@ -116,16 +116,20 @@ body.theme-aero,
 /* 3. Translucidez suave sobre a estilização original do modo claro */
 /* Barra lateral translúcida */
 .theme-aero aside {
-  background-color: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background-color: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 4px 0 24px rgba(0, 25, 70, 0.08) !important;
 }
 
 /* Cabeçalho superior translúcido */
 .theme-aero header {
-  background-color: rgba(255, 255, 255, 0.80) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background-color: rgba(255, 255, 255, 0.60) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 4px 20px rgba(0, 25, 70, 0.06) !important;
 }
 
 /* Cartões e painéis principais translúcidos */
@@ -137,28 +141,76 @@ body.theme-aero,
 .theme-aero .rounded-xl.border,
 .theme-aero .bg-white:not(button):not(input):not(select):not(body),
 .theme-aero div[class*="bg-white/"]:not(button):not(input):not(select) {
-  background-color: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background-color: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  box-shadow: 0 10px 30px rgba(0, 25, 70, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
 }
 
 /* Subcartões e itens internos translúcidos */
 .theme-aero main .bg-slate-50,
 .theme-aero main .bg-slate-100,
 .theme-aero main div[class*="p-3"][class*="rounded-xl"] {
-  background-color: rgba(248, 250, 252, 0.75) !important;
+  background-color: rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-color: rgba(255, 255, 255, 0.40) !important;
+}
+
+/* Tabelas e cabeçalhos */
+.theme-aero table thead {
+  background-color: rgba(248, 250, 252, 0.55) !important;
   backdrop-filter: blur(10px) !important;
   -webkit-backdrop-filter: blur(10px) !important;
+}
+
+.theme-aero table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.45) !important;
 }
 
 /* Modais e popovers translúcidos */
 .theme-aero [role="dialog"] > div,
 .theme-aero .fixed.inset-0 > div.bg-white,
 .theme-aero [role="listbox"] {
-  background-color: rgba(255, 255, 255, 0.92) !important;
-  backdrop-filter: blur(20px) !important;
-  -webkit-backdrop-filter: blur(20px) !important;
+  background-color: rgba(255, 255, 255, 0.90) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  box-shadow: 0 20px 50px rgba(0, 25, 70, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
 }
+
+/* Inputs de formulário com boa opacidade para digitação */
+.theme-aero input:not([type="checkbox"]):not([type="radio"]),
+.theme-aero select,
+.theme-aero textarea {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  color: #0f172a !important;
+}
+
+.theme-aero input::placeholder,
+.theme-aero textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* 4. Proteção de contraste dos textos para leitura sobre o fundo translúcido */
+.theme-aero .text-slate-400,
+.theme-aero .text-slate-300 {
+  color: #334155 !important; /* Slate-700: legibilidade nítida para datas, notas e labels */
+}
+
+.theme-aero .text-slate-500 {
+  color: #1e293b !important; /* Slate-800: alto contraste para subtítulos e descrições */
+}
+
+.theme-aero .text-slate-600 {
+  color: #0f172a !important; /* Slate-900: texto principal e itens de menu */
+}
+
+.theme-aero .text-slate-700,
+.theme-aero .text-slate-800 {
+  color: #0f172a !important; /* Slate-900: máxima definição */
+}
+
 
 
 
