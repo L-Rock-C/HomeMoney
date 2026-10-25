@@ -77,7 +77,7 @@ export function ManagerView({
     setAeroWallpaper(wp);
     if (typeof window !== 'undefined') {
       localStorage.setItem('homemoney-aero-wallpaper', wp);
-      const url = wp === 'aero-waves' ? '/wallpapers/aero-waves.jpg' : wp === 'aero-sky' ? '/wallpapers/aero-sky.png' : wp === 'aero-teal' ? '/wallpapers/aero-teal.png' : '/wallpapers/aero-blue.jpg';
+      const url = wp === 'aero-waves' ? '/wallpapers/aero-waves.jpg' : wp === 'aero-flora' ? '/wallpapers/aero-flora.jpg' : wp === 'aero-sky' ? '/wallpapers/aero-sky.png' : wp === 'aero-teal' ? '/wallpapers/aero-teal.png' : '/wallpapers/aero-blue.jpg';
       document.documentElement.style.setProperty('--aero-bg-image', `url('${url}')`);
     }
   }
@@ -715,7 +715,7 @@ export function ManagerView({
               onClick={() => onThemeChange && onThemeChange('dark')}
               className={`p-5 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between relative group ${
                 currentTheme === 'dark'
-                  ? 'border-emerald-500 bg-slate-900 shadow-lg shadow-emerald-500/10 ring-2 ring-emerald-500/20'
+                  ? 'border-emerald-500 bg-slate-900 text-white shadow-lg shadow-emerald-500/10 ring-2 ring-emerald-500/20'
                   : 'border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/30 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
@@ -730,8 +730,10 @@ export function ManagerView({
                 <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-indigo-400 mb-4 shadow-sm">
                   <Moon className="w-6 h-6 text-indigo-400" />
                 </div>
-                <h4 className="text-base font-bold text-slate-900 dark:text-white">Tema Escuro (Dark Mode)</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <h4 className={`text-base font-bold ${currentTheme === 'dark' ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
+                  Tema Escuro (Dark Mode)
+                </h4>
+                <p className={`text-xs mt-1 ${currentTheme === 'dark' ? 'text-slate-300' : 'text-slate-500 dark:text-slate-400'}`}>
                   Cores escuras confortáveis para uso noturno com alto contraste em tons esmeralda.
                 </p>
 
@@ -838,12 +840,21 @@ export function ManagerView({
                     <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center justify-between">
                       <span>Papel de Parede Aero:</span>
                       <span className="text-[10px] text-sky-600 dark:text-sky-300 font-semibold">
-                        {aeroWallpaper === 'aero-waves' ? 'Ondas Azuis' : aeroWallpaper === 'aero-sky' ? 'Céu Celeste' : aeroWallpaper === 'aero-teal' ? 'Aurora Teal' : 'Windows 7 Harmony (Azul)'}
+                        {aeroWallpaper === 'aero-waves'
+                          ? 'Ondas Azuis'
+                          : aeroWallpaper === 'aero-flora'
+                          ? 'Aero Flora'
+                          : aeroWallpaper === 'aero-sky'
+                          ? 'Céu Celeste'
+                          : aeroWallpaper === 'aero-teal'
+                          ? 'Aurora Teal'
+                          : 'Azul Sereno (Sem Logo)'}
                       </span>
                     </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                       {[
-                        { id: 'aero-blue', name: 'Windows 7 Harmony', img: '/wallpapers/aero-blue.jpg' },
+                        { id: 'aero-blue', name: 'Azul Sereno', img: '/wallpapers/aero-blue.jpg' },
+                        { id: 'aero-flora', name: 'Aero Flora', img: '/wallpapers/aero-flora.jpg' },
                         { id: 'aero-waves', name: 'Ondas Azuis', img: '/wallpapers/aero-waves.jpg' },
                         { id: 'aero-sky', name: 'Céu Celeste', img: '/wallpapers/aero-sky.png' },
                         { id: 'aero-teal', name: 'Aurora Teal', img: '/wallpapers/aero-teal.png' },
