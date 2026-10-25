@@ -43,6 +43,8 @@ export default function LoginPage() {
       document.documentElement.classList.add('dark');
     } else if (newTheme === 'aero') {
       document.documentElement.classList.add('theme-aero');
+      const savedWp = localStorage.getItem('homemoney-aero-wallpaper') || 'aero-sky';
+      document.documentElement.style.setProperty('--aero-bg-image', `url('/wallpapers/${savedWp}.png')`);
     }
   }
 

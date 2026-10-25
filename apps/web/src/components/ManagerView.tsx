@@ -65,6 +65,22 @@ export function ManagerView({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const [aeroWallpaper, setAeroWallpaper] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('homemoney-aero-wallpaper') || 'aero-sky';
+    }
+    return 'aero-sky';
+  });
+
+  function handleAeroWallpaperChange(wp: string, e?: React.MouseEvent) {
+    if (e) e.stopPropagation();
+    setAeroWallpaper(wp);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('homemoney-aero-wallpaper', wp);
+      document.documentElement.style.setProperty('--aero-bg-image', `url('/wallpapers/${wp}.png')`);
+    }
+  }
+
   function handleSwitchSection(section: 'CATEGORIES' | 'PAYMENTS' | 'THEMES') {
     setActiveSection(section);
     setError(null);
@@ -762,8 +778,8 @@ export function ManagerView({
               )}
 
               <div>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-b from-[#2a7acc] to-[#0d3870] flex items-center justify-center text-white mb-4 shadow-md border border-sky-300/60">
-                  <Sparkles className="w-6 h-6 text-sky-200 animate-pulse" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#1976d2] via-[#29b6f6] to-[#80d8ff] flex items-center justify-center text-white mb-4 shadow-md border border-white/80">
+                  <Sparkles className="w-6 h-6 text-white animate-pulse" />
                 </div>
                 <div className="flex items-center gap-2">
                   <h4 className="text-base font-bold text-slate-900 dark:text-white">Windows 7 (Frutiger Aero)</h4>
@@ -772,48 +788,86 @@ export function ManagerView({
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                  Estética fiel ao Windows 7: desktop azul royal Harmony com auroras, molduras Aero Glass em vidro ciano translúcido e janelas brancas nítidas.
+                  Estética Frutiger Aero luminosa: paleta em azul celeste radiante, auroras com toques orgânicos e efeito Aero Glass com translucidez cristalina (vidro jateado).
                 </p>
 
-                {/* Visual Preview: Miniature Windows 7 Desktop with Aero Window & Taskbar */}
-                <div className="mt-4 p-3 rounded-xl bg-gradient-to-b from-[#1b5fa8] via-[#104380] to-[#082650] border border-sky-300/40 shadow-inner space-y-2 relative overflow-hidden">
-                  {/* Subtle Aurora light glow */}
-                  <div className="absolute inset-0 bg-radial from-sky-400/20 via-transparent to-transparent pointer-events-none"></div>
+                {/* Visual Preview: Miniature Radiant Aero Desktop with Translucent Aero Window & Superbar */}
+                <div className="mt-4 p-3 rounded-xl bg-gradient-to-br from-[#1565c0] via-[#1e88e5] to-[#42a5f5] border border-sky-300/40 shadow-inner space-y-2 relative overflow-hidden">
+                  {/* Subtle Aurora light beam and organic green ambient glow */}
+                  <div className="absolute inset-0 bg-radial from-white/30 via-emerald-400/20 to-transparent pointer-events-none"></div>
 
-                  {/* Miniature Aero Glass Window */}
-                  <div className="rounded-lg border border-white/80 bg-sky-200/50 backdrop-blur-md shadow-lg p-1 space-y-1 relative z-10">
+                  {/* Miniature Aero Glass Window (Translucent!) */}
+                  <div className="rounded-lg border border-white/80 bg-white/40 backdrop-blur-md shadow-lg p-1 space-y-1 relative z-10">
                     {/* Window Titlebar */}
-                    <div className="flex items-center justify-between px-1.5 py-0.5 border-b border-sky-300/60">
+                    <div className="flex items-center justify-between px-1.5 py-0.5 border-b border-white/50 bg-sky-200/40">
                       <div className="flex items-center gap-1">
                         <span className="w-2 h-2 rounded-full bg-sky-400 border border-white"></span>
-                        <span className="text-[9px] font-bold text-slate-900 drop-shadow-xs">Painel de Controle</span>
+                        <span className="text-[9px] font-bold text-slate-900 drop-shadow-xs">Painel Financeiro</span>
                       </div>
                       <div className="flex items-center gap-0.5">
-                        <span className="w-2.5 h-1.5 rounded-2xs bg-white/60"></span>
-                        <span className="w-2.5 h-1.5 rounded-2xs bg-white/60"></span>
+                        <span className="w-2.5 h-1.5 rounded-2xs bg-white/70"></span>
+                        <span className="w-2.5 h-1.5 rounded-2xs bg-white/70"></span>
                         <span className="w-3 h-1.5 rounded-2xs bg-red-600 text-[6px] text-white flex items-center justify-center font-bold">✕</span>
                       </div>
                     </div>
-                    {/* Window Content Body (White like reference image) */}
-                    <div className="bg-white rounded-xs p-1.5 shadow-2xs space-y-1">
-                      <div className="h-1.5 w-1/2 bg-sky-100 rounded-xs"></div>
+                    {/* Window Content Body (Translucent Aero Glass) */}
+                    <div className="bg-white/75 backdrop-blur-sm rounded-xs p-1.5 shadow-2xs space-y-1 border border-white/60">
+                      <div className="h-1.5 w-1/2 bg-sky-300/60 rounded-xs"></div>
                       <div className="flex gap-1.5">
-                        <div className="h-4 w-1/3 bg-slate-50 border border-slate-200 rounded-xs"></div>
-                        <div className="h-4 w-1/3 bg-slate-50 border border-slate-200 rounded-xs"></div>
-                        <div className="h-4 w-1/3 bg-slate-50 border border-slate-200 rounded-xs"></div>
+                        <div className="h-4 w-1/3 bg-white/80 border border-sky-200/70 rounded-xs"></div>
+                        <div className="h-4 w-1/3 bg-white/80 border border-sky-200/70 rounded-xs"></div>
+                        <div className="h-4 w-1/3 bg-white/80 border border-sky-200/70 rounded-xs"></div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Miniature Windows 7 Taskbar */}
-                  <div className="h-4 rounded-md bg-gradient-to-b from-[#1c4d85]/90 to-[#0c2a52]/95 border border-white/30 backdrop-blur-sm flex items-center justify-between px-1.5 z-10 relative">
-                    <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-sky-500 to-cyan-300 border border-white shadow-xs"></div>
+                  {/* Miniature Aero Superbar (Translucent) */}
+                  <div className="h-4 rounded-md bg-white/40 border border-white/60 backdrop-blur-md flex items-center justify-between px-1.5 z-10 relative">
+                    <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-sky-400 to-cyan-300 border border-white shadow-xs"></div>
                     <div className="flex gap-1">
-                      <div className="w-3 h-2 rounded-2xs bg-white/30"></div>
-                      <div className="w-3 h-2 rounded-2xs bg-sky-400/60"></div>
+                      <div className="w-3 h-2 rounded-2xs bg-white/50"></div>
+                      <div className="w-3 h-2 rounded-2xs bg-sky-400/80"></div>
                     </div>
                   </div>
                 </div>
+
+                {/* Aero Wallpaper Selector */}
+                {currentTheme === 'aero' && (
+                  <div className="mt-4 pt-3 border-t border-sky-200/80 dark:border-slate-800" onClick={(e) => e.stopPropagation()}>
+                    <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-2 flex items-center justify-between">
+                      <span>Papel de Parede Aero:</span>
+                      <span className="text-[10px] text-sky-600 dark:text-sky-300 font-semibold">
+                        {aeroWallpaper === 'aero-teal' ? 'Aurora Aquamarine' : aeroWallpaper === 'aero-harmony' ? 'Harmonia Turquesa' : 'Céu Celeste'}
+                      </span>
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'aero-sky', name: 'Céu Celeste', img: '/wallpapers/aero-sky.png' },
+                        { id: 'aero-teal', name: 'Aurora Teal', img: '/wallpapers/aero-teal.png' },
+                        { id: 'aero-harmony', name: 'Harmonia', img: '/wallpapers/aero-harmony.png' },
+                      ].map((wp) => (
+                        <button
+                          key={wp.id}
+                          type="button"
+                          onClick={(e) => handleAeroWallpaperChange(wp.id, e)}
+                          className={`group relative rounded-lg overflow-hidden border-2 transition-all p-0.5 cursor-pointer h-12 ${
+                            aeroWallpaper === wp.id
+                              ? 'border-sky-500 ring-2 ring-sky-400 shadow-md scale-[1.02]'
+                              : 'border-white/80 hover:border-sky-300 opacity-80 hover:opacity-100'
+                          }`}
+                          title={wp.name}
+                        >
+                          <img src={wp.img} alt={wp.name} className="w-full h-full object-cover rounded-md" />
+                          {aeroWallpaper === wp.id && (
+                            <div className="absolute inset-0 bg-sky-500/20 flex items-center justify-center">
+                              <span className="w-2 h-2 rounded-full bg-white shadow-xs"></span>
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mt-6 pt-4 border-t border-sky-200/80 dark:border-slate-800">
