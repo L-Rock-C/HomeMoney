@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Wallet,
@@ -213,6 +213,28 @@ export default function HomePage() {
     return Array.from({ length: 12 }, (_, i) => `${currentYear}-${String(i + 1).padStart(2, '0')}`);
   });
 
+  // Refs de preservação de estado para evitar que recarregamentos resetem os filtros
+  const selectedMonthRef = useRef(selectedMonth);
+  const filterModeRef = useRef(filterMode);
+  const startDateRef = useRef(startDate);
+  const endDateRef = useRef(endDate);
+
+  useEffect(() => {
+    selectedMonthRef.current = selectedMonth;
+  }, [selectedMonth]);
+
+  useEffect(() => {
+    filterModeRef.current = filterMode;
+  }, [filterMode]);
+
+  useEffect(() => {
+    startDateRef.current = startDate;
+  }, [startDate]);
+
+  useEffect(() => {
+    endDateRef.current = endDate;
+  }, [endDate]);
+
   // Search & Type Filters
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
@@ -418,8 +440,8 @@ export default function HomePage() {
       }
     });
 
-    // 2. Busca dados frescos da rede (em segundo plano se já houver cache; com loading se não houver)
-    loadInitialData(!cached);
+    // 2. Busca dados frescos da rede (preservando o mês salvo em cache ou já selecionado)
+    loadInitialData(!cached, cached?.selectedMonth);
   }, [router]);
 
   const handleLogout = () => {
@@ -458,8 +480,8 @@ export default function HomePage() {
     applyTheme(order[nextIdx]);
   }
 
-  // Load Initial Data (com persistência em cache por usuário)
-  async function loadInitialData(showLoading = false) {
+  // Load Initial Data (com persistência em cache por usuário e preservação de filtro)
+  async function loadInitialData(showLoading = false, targetMonth?: string) {
     try {
       if (showLoading) setLoading(true);
       const [monthsData, accs, cats, peop, methods] = await Promise.all([
@@ -480,13 +502,23 @@ export default function HomePage() {
       const currentM = getCurrentMonthKey();
       const currentYear = new Date().getFullYear();
       const currentYearMonths = Array.from({ length: 12 }, (_, i) => `${currentYear}-${String(i + 1).padStart(2, '0')}`);
-      const allMonths = Array.from(new Set([...currentYearMonths, ...months, currentM])).sort();
+
+      // Preserva rigorosamente o mês que o usuário está visualizando (ex: Novembro),
+      // evitando que qualquer ação, cadastro ou transferência reverta para o mês corrente
+      const activeMonth = targetMonth || selectedMonthRef.current || currentM;
+      const allMonths = Array.from(new Set([...currentYearMonths, ...months, currentM, activeMonth])).sort();
       setAvailableMonths(allMonths);
 
-      const initialMonth = currentM;
-      setSelectedMonth(initialMonth);
+      setSelectedMonth(activeMonth);
+      selectedMonthRef.current = activeMonth;
 
-      const filterResult = await fetchTransactionsForFilter(initialMonth, '', '');
+      // Preserva o modo de filtro (Mês ou Intervalo de Datas)
+      let filterResult;
+      if (filterModeRef.current === 'RANGE' && startDateRef.current && endDateRef.current) {
+        filterResult = await fetchTransactionsForFilter(undefined, startDateRef.current, endDateRef.current);
+      } else {
+        filterResult = await fetchTransactionsForFilter(activeMonth, '', '');
+      }
 
       // Persiste no cache local para carregamento instantâneo nas próximas aberturas
       const activeUid = currentUser?.id || getStoredUser()?.id;
@@ -499,7 +531,7 @@ export default function HomePage() {
         transactions: filterResult?.trans || [],
         categoriesReport: filterResult?.catRep || { grandTotal: 0, categories: [] },
         availableMonths: allMonths,
-        selectedMonth: initialMonth,
+        selectedMonth: activeMonth,
       }, activeUid);
 
       // Carrega transferências pendentes de contatos vinculados
