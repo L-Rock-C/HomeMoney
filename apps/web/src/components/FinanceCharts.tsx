@@ -1,7 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, Scale, PieChart, BarChart3, HelpCircle } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import {
+  TrendingUp,
+  TrendingDown,
+  Scale,
+  PieChart,
+  BarChart3,
+  HelpCircle,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+} from 'lucide-react';
 
 interface CategoryItem {
   categoryId: string;
@@ -217,27 +227,109 @@ export function MonthlyBarChart({
   formatBRL,
 }: MonthlyBarChartProps) {
   const [hoveredMonth, setHoveredMonth] = useState<MonthlyItem | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const hasInitializedScroll = useRef(false);
 
-  if (!monthlyReports || monthlyReports.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-        <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mb-3">
-          <BarChart3 className="w-6 h-6" />
-        </div>
-        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-          Dados insuficientes para gerar o comparativo
-        </p>
-      </div>
-    );
-  }
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-  // Display the last 6-8 recorded months (sorted chronologically)
-  const sortedReports = [...monthlyReports].sort((a, b) => a.month.localeCompare(b.month));
-  const recentReports = sortedReports.slice(-8);
+  // Gera a lista contínua de meses da primeira transação até a última registrada (incluindo o mês corrente)
+  const continuousReports = useMemo(() => {
+    if (!monthlyReports || monthlyReports.length === 0) {
+      // Se não houver relatórios, exibe os 12 meses do ano corrente
+      const currentYear = now.getFullYear();
+      return Array.from({ length: 12 }, (_, i) => ({
+        month: `${currentYear}-${String(i + 1).padStart(2, '0')}`,
+        totalIncome: 0,
+        totalExpense: 0,
+        netBalance: 0,
+      }));
+    }
 
-  // Maximum value for scale
+    const reportMap = new Map<string, MonthlyItem>();
+    monthlyReports.forEach((r) => reportMap.set(r.month, r));
+
+    const existingMonths = Array.from(reportMap.keys()).sort();
+    const firstMonth = existingMonths[0];
+    const lastMonth = existingMonths[existingMonths.length - 1];
+
+    // Garante que o intervalo abrange da primeira transação até a última, incluindo o mês corrente
+    const startMonth = firstMonth < currentMonthKey ? firstMonth : currentMonthKey;
+    const endMonth = lastMonth > currentMonthKey ? lastMonth : currentMonthKey;
+
+    const [startYear, startM] = startMonth.split('-').map(Number);
+    const [endYear, endM] = endMonth.split('-').map(Number);
+
+    const result: MonthlyItem[] = [];
+    let curY = startYear;
+    let curM = startM;
+    let runningAccumulated = 0;
+
+    while (curY < endYear || (curY === endYear && curM <= endM)) {
+      const monthKey = `${curY}-${String(curM).padStart(2, '0')}`;
+      const existing = reportMap.get(monthKey);
+
+      if (existing) {
+        runningAccumulated = existing.accumulatedBalance ?? (runningAccumulated + existing.netBalance);
+        result.push(existing);
+      } else {
+        result.push({
+          month: monthKey,
+          totalIncome: 0,
+          totalExpense: 0,
+          netBalance: 0,
+          accumulatedBalance: runningAccumulated,
+        });
+      }
+
+      curM++;
+      if (curM > 12) {
+        curM = 1;
+        curY++;
+      }
+    }
+
+    return result;
+  }, [monthlyReports, currentMonthKey]);
+
+  // Rola automaticamente para centralizar o mês corrente na carga inicial
+  useEffect(() => {
+    if (!scrollContainerRef.current || continuousReports.length === 0) return;
+
+    // Seleciona o mês corrente como alvo de visualização inicial
+    const targetMonth = currentMonthKey;
+    const container = scrollContainerRef.current;
+    const targetEl = container.querySelector(`[data-month="${targetMonth}"]`) as HTMLElement;
+
+    if (targetEl) {
+      const scrollPos = targetEl.offsetLeft - container.offsetWidth / 2 + targetEl.offsetWidth / 2;
+      container.scrollTo({
+        left: Math.max(0, scrollPos),
+        behavior: hasInitializedScroll.current ? 'smooth' : 'auto',
+      });
+      hasInitializedScroll.current = true;
+    }
+  }, [continuousReports.length, currentMonthKey]);
+
+  const scrollToMonth = (monthKey: string) => {
+    if (!scrollContainerRef.current) return;
+    const container = scrollContainerRef.current;
+    const targetEl = container.querySelector(`[data-month="${monthKey}"]`) as HTMLElement;
+    if (targetEl) {
+      const scrollPos = targetEl.offsetLeft - container.offsetWidth / 2 + targetEl.offsetWidth / 2;
+      container.scrollTo({ left: Math.max(0, scrollPos), behavior: 'smooth' });
+    }
+  };
+
+  const scrollByAmount = (direction: 'left' | 'right') => {
+    if (!scrollContainerRef.current) return;
+    const amount = direction === 'left' ? -220 : 220;
+    scrollContainerRef.current.scrollBy({ left: amount, behavior: 'smooth' });
+  };
+
+  // Valor máximo para a escala das colunas
   const maxVal = Math.max(
-    ...recentReports.map((r) => Math.max(r.totalIncome, r.totalExpense, Math.abs(r.netBalance))),
+    ...continuousReports.map((r) => Math.max(r.totalIncome, r.totalExpense, Math.abs(r.netBalance))),
     1
   );
 
@@ -251,7 +343,7 @@ export function MonthlyBarChart({
 
   return (
     <div className="space-y-4">
-      {/* Legend & Summary Info */}
+      {/* Legend & Navigation Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
@@ -268,16 +360,57 @@ export function MonthlyBarChart({
           </div>
         </div>
 
-        <span className="text-[11px] text-slate-400">
-          Clique em um mês para filtrar
-        </span>
+        <div className="flex items-center gap-2">
+          {/* Controles de Navegação Rápida no Gráfico */}
+          <div className="flex items-center gap-1 p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 shadow-xs">
+            <button
+              type="button"
+              onClick={() => scrollByAmount('left')}
+              className="p-1 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700 transition cursor-pointer"
+              title="Rolar para meses anteriores"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                scrollToMonth(currentMonthKey);
+                onSelectMonth(currentMonthKey);
+              }}
+              className={`px-2 py-0.5 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                selectedMonth === currentMonthKey
+                  ? 'bg-emerald-500 text-white shadow-xs'
+                  : 'text-emerald-600 dark:text-emerald-400 hover:bg-white dark:hover:bg-slate-700'
+              }`}
+              title="Ir para o mês corrente"
+            >
+              Mês Atual
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollByAmount('right')}
+              className="p-1 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700 transition cursor-pointer"
+              title="Rolar para meses futuros"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <span className="hidden sm:inline text-[11px] text-slate-400">
+            Clique no mês para filtrar
+          </span>
+        </div>
       </div>
 
-      {/* Main Chart Graphic */}
-      <div className="relative pt-6 pb-2 border-b border-slate-200 dark:border-slate-800 overflow-x-auto max-w-full scrollbar-none">
-        <div className="grid grid-flow-col auto-cols-fr gap-2 sm:gap-4 items-end h-48 sm:h-56 px-2 min-w-[420px] sm:min-w-0">
-          {recentReports.map((report) => {
+      {/* Main Chart Graphic com Scroll Horizontal e Scrollbar Temática */}
+      <div
+        ref={scrollContainerRef}
+        className="relative pt-6 pb-3 border-b border-slate-200 dark:border-slate-800 overflow-x-auto max-w-full"
+      >
+        <div className="flex items-end gap-2.5 sm:gap-3.5 h-52 sm:h-56 px-4 min-w-max pb-1">
+          {continuousReports.map((report) => {
             const isSelected = report.month === selectedMonth;
+            const isCurrent = report.month === currentMonthKey;
             const incomeHeight = Math.max((report.totalIncome / maxVal) * 100, 3);
             const expenseHeight = Math.max((report.totalExpense / maxVal) * 100, 3);
             const balanceHeight = Math.max((Math.abs(report.netBalance) / maxVal) * 100, 3);
@@ -286,15 +419,25 @@ export function MonthlyBarChart({
             return (
               <div
                 key={report.month}
+                data-month={report.month}
                 onClick={() => onSelectMonth(report.month)}
                 onMouseEnter={() => setHoveredMonth(report)}
                 onMouseLeave={() => setHoveredMonth(null)}
-                className={`group relative flex flex-col items-center justify-end h-full p-1.5 sm:p-2 rounded-2xl cursor-pointer transition-all ${
+                className={`group relative flex-shrink-0 w-16 sm:w-20 flex flex-col items-center justify-end h-full p-1.5 sm:p-2 rounded-2xl cursor-pointer transition-all ${
                   isSelected
                     ? 'bg-emerald-500/10 dark:bg-emerald-500/15 ring-2 ring-emerald-500 shadow-md'
+                    : isCurrent
+                    ? 'bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/15'
                     : 'hover:bg-slate-100/70 dark:hover:bg-slate-800/40'
                 }`}
               >
+                {/* Badge do Mês Atual */}
+                {isCurrent && (
+                  <span className="absolute top-1.5 px-1 py-0.2 rounded text-[9px] font-bold bg-emerald-500 text-white shadow-xs tracking-tight">
+                    Hoje
+                  </span>
+                )}
+
                 {/* Columns Cluster */}
                 <div className="flex items-end justify-center gap-1 sm:gap-1.5 w-full h-full pb-2">
                   {/* Income Column */}
@@ -328,6 +471,8 @@ export function MonthlyBarChart({
                   className={`text-[11px] font-semibold tracking-tight transition-colors whitespace-nowrap mt-1 ${
                     isSelected
                       ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                      : isCurrent
+                      ? 'text-emerald-700 dark:text-emerald-300 font-bold'
                       : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'
                   }`}
                 >
@@ -348,6 +493,11 @@ export function MonthlyBarChart({
               {hoveredMonth.month === selectedMonth && (
                 <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold">
                   Mês Ativo
+                </span>
+              )}
+              {hoveredMonth.month === currentMonthKey && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500 text-white font-semibold">
+                  Mês Corrente
                 </span>
               )}
             </span>
@@ -371,7 +521,7 @@ export function MonthlyBarChart({
           </>
         ) : (
           <span className="text-slate-500 dark:text-slate-400 italic">
-            Passe o mouse sobre as colunas para ver detalhes de cada mês.
+            Passe o mouse ou toque sobre as colunas para ver detalhes de cada mês.
           </span>
         )}
       </div>

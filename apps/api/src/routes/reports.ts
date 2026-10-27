@@ -29,20 +29,49 @@ export const reportsRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    const sortedMonths = Array.from(monthMap.keys()).sort();
+    if (monthMap.size === 0) {
+      return [];
+    }
+
+    const recordedMonths = Array.from(monthMap.keys()).sort();
+    const firstMonth = recordedMonths[0];
+    const lastMonth = recordedMonths[recordedMonths.length - 1];
+
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    // Garante que o intervalo abrange da primeira transação até a última, incluindo o mês corrente
+    const startMonth = firstMonth < currentMonthKey ? firstMonth : currentMonthKey;
+    const endMonth = lastMonth > currentMonthKey ? lastMonth : currentMonthKey;
+
+    const [startYear, startM] = startMonth.split('-').map(Number);
+    const [endYear, endM] = endMonth.split('-').map(Number);
+
+    const continuousMonths: string[] = [];
+    let curY = startYear;
+    let curM = startM;
+    while (curY < endYear || (curY === endYear && curM <= endM)) {
+      continuousMonths.push(`${curY}-${String(curM).padStart(2, '0')}`);
+      curM++;
+      if (curM > 12) {
+        curM = 1;
+        curY++;
+      }
+    }
+
     let accumulatedBalance = 0;
 
-    const result = sortedMonths.map((m) => {
-      const { income, expense, pendingExpense, pendingIncome } = monthMap.get(m)!;
-      const netBalance = income - expense;
+    const result = continuousMonths.map((m) => {
+      const data = monthMap.get(m) || { income: 0, expense: 0, pendingExpense: 0, pendingIncome: 0 };
+      const netBalance = data.income - data.expense;
       accumulatedBalance += netBalance;
 
       return {
         month: m,
-        totalIncome: Math.round(income * 100) / 100,
-        totalExpense: Math.round(expense * 100) / 100,
-        pendingExpense: Math.round(pendingExpense * 100) / 100,
-        pendingIncome: Math.round(pendingIncome * 100) / 100,
+        totalIncome: Math.round(data.income * 100) / 100,
+        totalExpense: Math.round(data.expense * 100) / 100,
+        pendingExpense: Math.round(data.pendingExpense * 100) / 100,
+        pendingIncome: Math.round(data.pendingIncome * 100) / 100,
         netBalance: Math.round(netBalance * 100) / 100,
         accumulatedBalance: Math.round(accumulatedBalance * 100) / 100,
       };
