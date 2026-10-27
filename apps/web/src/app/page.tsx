@@ -1751,7 +1751,10 @@ export default function HomePage() {
                         </div>
                       ))}
                     {people.filter((p) => p.toReceive > 0).length === 0 && (
-                      <p className="text-xs text-slate-500 text-center py-2">Nenhum valor pendente de terceiros 🎉</p>
+                      <p className="text-xs text-slate-500 text-center py-2 flex items-center justify-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>Nenhum valor pendente de terceiros</span>
+                      </p>
                     )}
                   </div>
                 </div>

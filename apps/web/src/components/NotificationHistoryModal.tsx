@@ -276,8 +276,9 @@ export function NotificationHistoryModal({
                           <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                             {item.targetOrSource} • R$ {item.formattedAmount}
                           </span>
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                            ✓ Lançamento Registrado
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 shrink-0" />
+                            <span>Lançamento Registrado</span>
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 italic">

@@ -273,7 +273,9 @@ export function ManagerView({
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
-          <button onClick={() => setError(null)} className="text-xs font-bold hover:underline cursor-pointer">✕</button>
+          <button onClick={() => setError(null)} className="p-1 rounded-lg hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 cursor-pointer transition">
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
@@ -283,7 +285,9 @@ export function ManagerView({
             <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
             <span>{successMessage}</span>
           </div>
-          <button onClick={() => setSuccessMessage(null)} className="text-xs font-bold hover:underline cursor-pointer">✕</button>
+          <button onClick={() => setSuccessMessage(null)} className="p-1 rounded-lg hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 cursor-pointer transition">
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
@@ -810,7 +814,9 @@ export function ManagerView({
                       <div className="flex items-center gap-0.5">
                         <span className="w-2.5 h-1.5 rounded-2xs bg-white/70"></span>
                         <span className="w-2.5 h-1.5 rounded-2xs bg-white/70"></span>
-                        <span className="w-3 h-1.5 rounded-2xs bg-red-600 text-[6px] text-white flex items-center justify-center font-bold">✕</span>
+                        <span className="w-3 h-1.5 rounded-2xs bg-red-600 text-white flex items-center justify-center font-bold">
+                          <X className="w-1.5 h-1.5 text-white stroke-[3]" />
+                        </span>
                       </div>
                     </div>
                     {/* Window Content Body (Translucent Aero Glass) */}

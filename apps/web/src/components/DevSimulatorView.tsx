@@ -17,6 +17,7 @@ import {
   Zap,
   Terminal,
   ShieldAlert,
+  Ban,
 } from 'lucide-react';
 import { simulateTransferNotification } from '../lib/api';
 import {
@@ -154,7 +155,7 @@ export function DevSimulatorView({
 
       if (preset === 'blocked_whatsapp') {
         addLog(
-          `🚫 [Filtro de Pacote Ativo] Pacote "com.whatsapp" bloqueado com sucesso: mensagens do WhatsApp com valores não geram transações.`,
+          `[Filtro de Pacote Ativo] Pacote "com.whatsapp" bloqueado com sucesso: mensagens do WhatsApp com valores não geram transações.`,
           'error'
         );
         return;
@@ -177,11 +178,11 @@ export function DevSimulatorView({
 
       if (isBlockedScenario || queueAfter === queueBefore) {
         addLog(
-          `🚫 [Filtro Estrito Ativo] Notificação rejeitada com sucesso (${blockedReason || 'não é transação'}): "${text}"`,
+          `[Filtro Estrito Ativo] Notificação rejeitada com sucesso (${blockedReason || 'não é transação'}): "${text}"`,
           'error'
         );
       } else {
-        addLog(`✅ Notificação bancária válida aceita na fila de conciliação: "${text}"`, 'success');
+        addLog(`[Notificação Válida] Transação bancária aceita na fila de conciliação: "${text}"`, 'success');
       }
       onRefreshAllData();
     } catch (e: any) {
@@ -426,34 +427,38 @@ export function DevSimulatorView({
                 <button
                   type="button"
                   onClick={() => handleSimulateBankNotification('blocked_loan')}
-                  className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-[11px] font-bold transition cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-[11px] font-bold transition cursor-pointer"
                   title="Simula sugestão de empréstimo do banco (R$ 15.000)"
                 >
-                  🚫 Empréstimo Banco
+                  <Ban className="w-3 h-3 text-rose-500 shrink-0" />
+                  <span>Empréstimo Banco</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSimulateBankNotification('blocked_whatsapp')}
-                  className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-[11px] font-bold transition cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-[11px] font-bold transition cursor-pointer"
                   title="Simula mensagem do WhatsApp com valor em R$"
                 >
-                  🚫 WhatsApp com R$
+                  <Ban className="w-3 h-3 text-rose-500 shrink-0" />
+                  <span>WhatsApp com R$</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSimulateBankNotification('blocked_invoice')}
-                  className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-[11px] font-bold transition cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-[11px] font-bold transition cursor-pointer"
                   title="Simula aviso de fechamento de fatura"
                 >
-                  🚫 Fatura Fechada
+                  <Ban className="w-3 h-3 text-rose-500 shrink-0" />
+                  <span>Fatura Fechada</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSimulateBankNotification('blocked_limit')}
-                  className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-[11px] font-bold transition cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-[11px] font-bold transition cursor-pointer"
                   title="Simula aviso de aumento de limite"
                 >
-                  🚫 Aumento de Limite
+                  <Ban className="w-3 h-3 text-rose-500 shrink-0" />
+                  <span>Aumento de Limite</span>
                 </button>
               </div>
             </div>

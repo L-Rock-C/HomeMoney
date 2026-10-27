@@ -77,6 +77,31 @@ body {
 }
 
 /* ========================================================================= */
+/* Zebrado de Tabelas em Todos os Temas (Zebra Striping)                     */
+/* ========================================================================= */
+/* Modo Claro (Light Theme) */
+table tbody tr:nth-child(even) {
+  background-color: rgba(241, 245, 249, 0.70); /* Slate-100 suave */
+}
+table tbody tr:nth-child(odd) {
+  background-color: transparent;
+}
+table tbody tr:hover {
+  background-color: rgba(226, 232, 240, 0.85); /* Slate-200 no hover */
+}
+
+/* Modo Escuro (Dark Theme) */
+.dark table tbody tr:nth-child(even) {
+  background-color: rgba(30, 41, 59, 0.40); /* Slate-800 suave */
+}
+.dark table tbody tr:nth-child(odd) {
+  background-color: transparent;
+}
+.dark table tbody tr:hover {
+  background-color: rgba(51, 65, 85, 0.65); /* Slate-700 no hover */
+}
+
+/* ========================================================================= */
 /* ========================================================================= */
 /* Aero Theme - Modo Claro com Translucidez e Fundo Wallpaper               */
 /* ========================================================================= */
@@ -175,8 +200,20 @@ body.theme-aero,
   -webkit-backdrop-filter: blur(10px) !important;
 }
 
+.theme-aero table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.42) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.theme-aero table tbody tr:nth-child(odd) {
+  background-color: rgba(255, 255, 255, 0.18) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
 .theme-aero table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.45) !important;
+  background-color: rgba(255, 255, 255, 0.70) !important;
 }
 
 /* Modais e popovers translúcidos */

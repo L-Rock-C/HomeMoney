@@ -223,14 +223,18 @@ export function ManagerModal({
           {error && (
             <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-600 dark:text-rose-400 text-xs sm:text-sm flex items-center justify-between">
               <span>{error}</span>
-              <button onClick={() => setError(null)} className="text-xs font-bold hover:underline cursor-pointer">✕</button>
+              <button onClick={() => setError(null)} className="p-1 rounded-lg hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 cursor-pointer transition">
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
 
           {successMessage && (
             <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm flex items-center justify-between">
               <span>{successMessage}</span>
-              <button onClick={() => setSuccessMessage(null)} className="text-xs font-bold hover:underline cursor-pointer">✕</button>
+              <button onClick={() => setSuccessMessage(null)} className="p-1 rounded-lg hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 cursor-pointer transition">
+                <X className="w-3.5 h-3.5" />
+              </button>
             </div>
           )}
 

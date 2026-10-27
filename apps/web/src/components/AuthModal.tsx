@@ -184,8 +184,11 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
 
               {/* Default Credentials Badge */}
               <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[11px] text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
-                <span>
-                  💡 Acesso inicial: Usuário <strong>Lucas</strong> | Senha <strong>lucas123</strong>
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                  <span>
+                    Acesso inicial: Usuário <strong>Lucas</strong> | Senha <strong>lucas123</strong>
+                  </span>
                 </span>
               </div>
 

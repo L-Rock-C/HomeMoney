@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  CalendarClock,
   Clock,
   AlertCircle,
   AlertTriangle,
@@ -14,7 +13,6 @@ import {
   User,
   Search,
   Filter,
-  Plus,
   ArrowDownRight,
   ArrowUpRight,
   Edit2,
@@ -35,7 +33,7 @@ interface PlannedExpensesViewProps {
   onTogglePaid: (id: string) => Promise<void>;
   onEdit: (transaction: any) => void;
   onDelete: (id: string) => Promise<void>;
-  onCreate: () => void;
+  onCreate?: () => void;
   onSelectDetail: (transaction: any) => void;
   accounts: any[];
   categories: any[];
@@ -237,39 +235,6 @@ export function PlannedExpensesView({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* ========================================================================= */}
-      {/* 1. Header com Título e Ação Rápida */}
-      {/* ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent border border-amber-500/20 shadow-sm">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center justify-center shadow-xs">
-            <CalendarClock className="w-6 h-6 text-amber-500" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                Gastos Previstos
-              </h2>
-              {metrics.expenseCount > 0 && (
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                  {metrics.expenseCount} {metrics.expenseCount === 1 ? 'pendência' : 'pendências'}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Transações e contas pendentes a liquidar no mês selecionado
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={onCreate}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm shadow-md shadow-amber-500/20 hover:shadow-lg transition cursor-pointer self-start sm:self-auto shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Novo Gasto Previsto</span>
-        </button>
-      </div>
 
       {/* ========================================================================= */}
       {/* 2. KPI Cards de Compromissos Futuros */}
@@ -326,17 +291,21 @@ export function PlannedExpensesView({
           >
             {formatBRL(metrics.overdueExpense)}
           </div>
-          <p className="mt-2 text-xs font-medium">
+          <div className="mt-2 text-xs font-medium">
             {metrics.overdueCount > 0 ? (
-              <span className="text-rose-600 dark:text-rose-400">
-                ⚠️ {metrics.overdueCount} {metrics.overdueCount === 1 ? 'conta vencida' : 'contas vencidas'}
+              <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 font-semibold">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  {metrics.overdueCount} {metrics.overdueCount === 1 ? 'conta vencida' : 'contas vencidas'}
+                </span>
               </span>
             ) : (
-              <span className="text-emerald-600 dark:text-emerald-400">
-                🎉 Nenhuma conta atrasada
+              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Nenhuma conta atrasada</span>
               </span>
             )}
-          </p>
+          </div>
         </div>
 
         {/* Próximos 7 Dias / Vencendo Hoje */}
@@ -486,9 +455,9 @@ export function PlannedExpensesView({
       {/* ========================================================================= */}
       {/* 4. Lista Principal de Transações e Resumo Lateral */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Coluna Principal: Tabela & Lista de Gastos */}
-        <div className="lg:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Coluna Principal: Tabela & Lista de Gastos (Maior Proporção: ~75% em Desktop) */}
+        <div className="lg:col-span-8 xl:col-span-9 space-y-4">
           <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 overflow-hidden shadow-sm">
             {/* Header da Seção */}
             <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-900/80">
@@ -643,12 +612,6 @@ export function PlannedExpensesView({
                               Todos os compromissos deste filtro já foram pagos ou não há lançamentos para o mês.
                             </p>
                           </div>
-                          <button
-                            onClick={onCreate}
-                            className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-sm transition"
-                          >
-                            Agendar Novo Gasto
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -747,24 +710,24 @@ export function PlannedExpensesView({
           </div>
         </div>
 
-        {/* Coluna Lateral: Resumo por Categoria & Maiores Compromissos */}
-        <div className="space-y-6">
+        {/* Coluna Lateral: Resumo por Categoria & Maiores Compromissos (Proporção compacta: ~25%) */}
+        <div className="lg:col-span-4 xl:col-span-3 space-y-4">
           {/* Card 1: Maiores Gastos Previstos */}
-          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Coins className="w-4 h-4 text-amber-500" />
+              <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Coins className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 Maiores Compromissos
               </h3>
-              <span className="text-[11px] font-semibold text-slate-400">Top 4</span>
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Top 4</span>
             </div>
 
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               {topPendingExpenses.map((t) => (
                 <div
                   key={t.id}
                   onClick={() => onSelectDetail(t)}
-                  className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/60 flex items-center justify-between cursor-pointer hover:border-amber-500/40 transition"
+                  className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/60 flex items-center justify-between cursor-pointer hover:border-amber-500/40 transition"
                 >
                   <div className="min-w-0 pr-2">
                     <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
@@ -781,7 +744,7 @@ export function PlannedExpensesView({
               ))}
 
               {topPendingExpenses.length === 0 && (
-                <p className="text-xs text-slate-400 text-center py-4">
+                <p className="text-xs text-slate-400 text-center py-3">
                   Sem despesas pendentes no momento.
                 </p>
               )}
@@ -789,25 +752,25 @@ export function PlannedExpensesView({
           </div>
 
           {/* Card 2: Gastos Previstos por Categoria */}
-          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+          <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Tag className="w-4 h-4 text-emerald-500" />
+              <h3 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                 Onde você vai gastar
               </h3>
-              <span className="text-[11px] font-semibold text-slate-400">Por Categoria</span>
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Categorias</span>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {categoryBreakdown.map((c) => {
                 const percent = metrics.totalExpense > 0 ? Math.round((c.total / metrics.totalExpense) * 100) : 0;
                 return (
                   <div key={c.name} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-slate-700 dark:text-slate-300">
+                      <span className="font-medium text-slate-700 dark:text-slate-300 truncate pr-2">
                         {c.name} ({c.count})
                       </span>
-                      <span className="font-bold text-slate-900 dark:text-white">
+                      <span className="font-bold text-slate-900 dark:text-white shrink-0">
                         {formatBRL(c.total)} ({percent}%)
                       </span>
                     </div>
@@ -822,7 +785,7 @@ export function PlannedExpensesView({
               })}
 
               {categoryBreakdown.length === 0 && (
-                <p className="text-xs text-slate-400 text-center py-4">
+                <p className="text-xs text-slate-400 text-center py-3">
                   Nenhum dado por categoria disponível.
                 </p>
               )}
