@@ -181,6 +181,24 @@ table tbody tr:hover {
   background-color: rgba(51, 65, 85, 0.65); /* Slate-700 no hover */
 }
 
+/* Linha de Totais (tfoot) */
+table tfoot {
+  border-top: 2px solid #cbd5e1;
+  background-color: rgba(241, 245, 249, 0.95);
+  font-weight: 600;
+}
+table tfoot tr {
+  background-color: rgba(241, 245, 249, 0.95) !important;
+}
+
+.dark table tfoot {
+  border-top-color: #334155;
+  background-color: rgba(15, 23, 42, 0.95);
+}
+.dark table tfoot tr {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+}
+
 /* ========================================================================= */
 /* ========================================================================= */
 /* Aero Theme - Modo Claro com Translucidez e Fundo Wallpaper               */
@@ -294,6 +312,16 @@ body.theme-aero,
 
 .theme-aero table tbody tr:hover {
   background-color: rgba(255, 255, 255, 0.70) !important;
+}
+
+.theme-aero table tfoot {
+  border-top: 2px solid rgba(255, 255, 255, 0.70) !important;
+  background-color: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+.theme-aero table tfoot tr {
+  background-color: rgba(255, 255, 255, 0.65) !important;
 }
 
 /* Modais e popovers translúcidos */

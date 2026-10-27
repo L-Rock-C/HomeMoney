@@ -659,6 +659,11 @@ export function ProfileContactsView({
               return true;
             });
 
+            const contactsSummary = {
+              count: filteredContacts.length,
+              totalNet: filteredContacts.reduce((sum, c) => sum + (c.netBalance || 0), 0),
+            };
+
             return (
               <div className="space-y-4">
                 {/* Search & Tabs */}
@@ -855,6 +860,40 @@ export function ProfileContactsView({
                           </tr>
                         )}
                       </tbody>
+                      {/* Linha de Totais da Tabela (Responsiva ao filtro ativo) */}
+                      <tfoot className="border-t-2 border-slate-300 dark:border-slate-700 bg-slate-50/95 dark:bg-slate-900/95 font-medium text-xs">
+                        <tr>
+                          <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-700 dark:text-slate-200 uppercase text-xs tracking-wider">
+                                TOTAL
+                              </span>
+                              <span className="font-semibold text-slate-600 dark:text-slate-300">
+                                {contactsSummary.count} {contactsSummary.count === 1 ? 'contato' : 'contatos'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-xs text-slate-400 dark:text-slate-600">
+                            —
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={`text-xs font-bold font-mono px-2.5 py-1 rounded-lg ${
+                                contactsSummary.totalNet > 0
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                  : contactsSummary.totalNet < 0
+                                  ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                              }`}
+                            >
+                              {formatBRL(contactsSummary.totalNet)}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-center text-xs text-slate-400 dark:text-slate-600">
+                            —
+                          </td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
 
@@ -939,6 +978,31 @@ export function ProfileContactsView({
                         Nenhum contato encontrado para este filtro.
                       </div>
                     )}
+
+                    {/* Resumo Rodapé Mobile */}
+                    <div className="p-3.5 border-t-2 border-slate-200 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-900/95 flex items-center justify-between">
+                      <div>
+                        <span className="uppercase text-[11px] font-bold text-slate-400 tracking-wider block">
+                          Total
+                        </span>
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          {contactsSummary.count} {contactsSummary.count === 1 ? 'contato' : 'contatos'}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span
+                          className={`text-xs font-bold font-mono px-2.5 py-1 rounded-lg ${
+                            contactsSummary.totalNet > 0
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              : contactsSummary.totalNet < 0
+                              ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                          }`}
+                        >
+                          {formatBRL(contactsSummary.totalNet)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

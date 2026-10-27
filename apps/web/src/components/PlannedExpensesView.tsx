@@ -198,6 +198,33 @@ export function PlannedExpensesView({
     });
   }, [allPendingTransactions, search, statusFilter, typeFilter, categoryFilter, accountFilter]);
 
+  // Resumo responsivo dos gastos previstos filtrados
+  const plannedSummary = useMemo(() => {
+    let expenseTotal = 0;
+    let incomeTotal = 0;
+    let expenseCount = 0;
+    let incomeCount = 0;
+
+    for (const t of filteredList) {
+      if (t.type === 'INCOME') {
+        incomeTotal += t.amount;
+        incomeCount++;
+      } else {
+        expenseTotal += t.amount;
+        expenseCount++;
+      }
+    }
+
+    return {
+      count: filteredList.length,
+      expenseTotal,
+      incomeTotal,
+      expenseCount,
+      incomeCount,
+      netTotal: incomeTotal - expenseTotal,
+    };
+  }, [filteredList]);
+
   // Agrupamento por Categoria para o resumo lateral
   const categoryBreakdown = useMemo(() => {
     const map = new Map<string, { name: string; total: number; count: number }>();
@@ -617,6 +644,46 @@ export function PlannedExpensesView({
                     </tr>
                   )}
                 </tbody>
+                {/* Linha de Totais da Tabela (Responsiva ao filtro ativo) */}
+                <tfoot className="border-t-2 border-slate-300 dark:border-slate-700 bg-slate-50/95 dark:bg-slate-900/95 font-medium text-xs">
+                  <tr>
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="font-bold text-slate-700 dark:text-slate-200 uppercase text-xs tracking-wider">
+                        TOTAL
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200 text-xs">
+                      {plannedSummary.count}{' '}
+                      {plannedSummary.count === 1 ? 'compromisso pendente' : 'compromissos pendentes'}
+                    </td>
+                    <td className="py-3.5 px-4 text-xs text-slate-500 dark:text-slate-400">
+                      <span className="text-rose-500 font-semibold">{plannedSummary.expenseCount} despesas</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-xs text-slate-500 dark:text-slate-400">
+                      {plannedSummary.incomeCount > 0 ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                          {plannedSummary.incomeCount} receitas
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-bold text-sm whitespace-nowrap">
+                      <span className="text-rose-500">-{formatBRL(plannedSummary.expenseTotal)}</span>
+                      {plannedSummary.incomeTotal > 0 && (
+                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold leading-tight">
+                          +{formatBRL(plannedSummary.incomeTotal)}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-center text-xs text-slate-400 dark:text-slate-600">
+                      —
+                    </td>
+                    <td className="py-3.5 px-4 text-center text-xs text-slate-400 dark:text-slate-600">
+                      —
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
 
@@ -706,6 +773,28 @@ export function PlannedExpensesView({
                   </p>
                 </div>
               )}
+
+              {/* Resumo Rodapé Mobile */}
+              <div className="p-3.5 border-t-2 border-slate-200 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-900/95 flex items-center justify-between">
+                <div>
+                  <span className="uppercase text-[11px] font-bold text-slate-400 tracking-wider block">
+                    Total Previsto
+                  </span>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {plannedSummary.count} {plannedSummary.count === 1 ? 'compromisso' : 'compromissos'}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm font-bold text-rose-500">
+                    -{formatBRL(plannedSummary.expenseTotal)}
+                  </span>
+                  {plannedSummary.incomeTotal > 0 && (
+                    <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold leading-tight">
+                      +{formatBRL(plannedSummary.incomeTotal)}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

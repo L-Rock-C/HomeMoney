@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Wallet,
@@ -724,6 +724,64 @@ export default function HomePage() {
 
     return matchesSearch && matchesType && matchesAccount;
   });
+
+  // Resumo dinâmico e responsivo dos lançamentos filtrados
+  const transactionsSummary = useMemo(() => {
+    let incomeCount = 0;
+    let expenseCount = 0;
+    let paidCount = 0;
+    let pendingCount = 0;
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    for (const t of filteredTransactions) {
+      if (t.type === 'INCOME') {
+        incomeCount++;
+        totalIncome += t.amount;
+      } else {
+        expenseCount++;
+        totalExpense += t.amount;
+      }
+
+      if (t.paid) {
+        paidCount++;
+      } else {
+        pendingCount++;
+      }
+    }
+
+    const net = totalIncome - totalExpense;
+    return {
+      totalCount: filteredTransactions.length,
+      incomeCount,
+      expenseCount,
+      paidCount,
+      pendingCount,
+      totalIncome,
+      totalExpense,
+      net,
+    };
+  }, [filteredTransactions]);
+
+  // Resumo do balanço financeiro consolidado
+  const balanceSummary = useMemo(() => {
+    let totalIncome = 0;
+    let totalExpense = 0;
+    for (const m of monthlyReports) {
+      totalIncome += m.totalIncome || 0;
+      totalExpense += m.totalExpense || 0;
+    }
+    const netBalance = totalIncome - totalExpense;
+    const lastAccumulated =
+      monthlyReports.length > 0 ? monthlyReports[monthlyReports.length - 1].accumulatedBalance : 0;
+    return {
+      monthCount: monthlyReports.length,
+      totalIncome,
+      totalExpense,
+      netBalance,
+      lastAccumulated,
+    };
+  }, [monthlyReports]);
 
   const pendingExpensesCount = transactions.filter((t) => !t.paid && t.type !== 'INCOME').length;
 
@@ -1983,6 +2041,74 @@ export default function HomePage() {
                         </tr>
                       )}
                     </tbody>
+                    {/* Linha de Totais da Tabela (Responsiva ao filtro ativo) */}
+                    <tfoot className="border-t-2 border-slate-300 dark:border-slate-700 bg-slate-50/95 dark:bg-slate-900/95 font-medium text-xs">
+                      <tr>
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <span className="font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                            TOTAL
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-800 dark:text-slate-200">
+                          {transactionsSummary.totalCount}{' '}
+                          {transactionsSummary.totalCount === 1 ? 'lançamento' : 'lançamentos'}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              {transactionsSummary.paidCount} pagos
+                            </span>
+                            <span className="text-slate-400 dark:text-slate-600">•</span>
+                            <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-semibold">
+                              <Clock className="w-3.5 h-3.5" />
+                              {transactionsSummary.pendingCount} pendentes
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-500 dark:text-slate-400">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                            {transactionsSummary.incomeCount} receitas
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-500 dark:text-slate-400">
+                          <span className="text-rose-500 font-medium">
+                            {transactionsSummary.expenseCount} despesas
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-400 dark:text-slate-600">
+                          —
+                        </td>
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <div className="flex flex-col items-end">
+                            <div className="flex items-center gap-2 text-[11px]">
+                              <span className="text-emerald-600 dark:text-emerald-400 font-semibold" title="Total Receitas">
+                                +{formatBRL(transactionsSummary.totalIncome)}
+                              </span>
+                              <span className="text-slate-300 dark:text-slate-700">|</span>
+                              <span className="text-rose-500 font-semibold" title="Total Despesas">
+                                -{formatBRL(transactionsSummary.totalExpense)}
+                              </span>
+                            </div>
+                            <div className="text-sm font-bold mt-0.5">
+                              <span
+                                className={
+                                  transactionsSummary.net >= 0
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-rose-500'
+                                }
+                              >
+                                {transactionsSummary.net >= 0 ? '+' : ''}
+                                {formatBRL(transactionsSummary.net)}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-center text-slate-400 dark:text-slate-600">
+                          —
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
 
@@ -2059,6 +2185,53 @@ export default function HomePage() {
                       Nenhuma transação encontrada para este filtro.
                     </div>
                   )}
+
+                  {/* Resumo Rodapé Mobile */}
+                  <div className="p-3.5 border-t-2 border-slate-200 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-900/95 flex flex-col gap-2">
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-300">
+                      <div className="flex items-center gap-2">
+                        <span className="uppercase text-[11px] font-bold text-slate-400 tracking-wider">
+                          Total
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                          {transactionsSummary.totalCount}{' '}
+                          {transactionsSummary.totalCount === 1 ? 'transação' : 'transações'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px]">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                          {transactionsSummary.paidCount} pagas
+                        </span>
+                        <span>•</span>
+                        <span className="text-amber-600 dark:text-amber-400 font-medium">
+                          {transactionsSummary.pendingCount} pendentes
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
+                      <div className="text-[11px] text-slate-500 flex gap-2">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                          +{formatBRL(transactionsSummary.totalIncome)}
+                        </span>
+                        <span>•</span>
+                        <span className="text-rose-500 font-semibold">
+                          -{formatBRL(transactionsSummary.totalExpense)}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span
+                          className={`text-sm font-bold ${
+                            transactionsSummary.net >= 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-rose-500'
+                          }`}
+                        >
+                          {transactionsSummary.net >= 0 ? '+' : ''}
+                          {formatBRL(transactionsSummary.net)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2134,6 +2307,46 @@ export default function HomePage() {
                       </tr>
                     ))}
                   </tbody>
+                  {/* Linha de Total Consolidado do Balanço Histórico */}
+                  <tfoot className="border-t-2 border-slate-300 dark:border-slate-700 bg-slate-50/95 dark:bg-slate-900/95 font-mono text-xs">
+                    <tr>
+                      <td className="py-3.5 px-4 font-sans font-bold text-slate-900 dark:text-white">
+                        <div className="flex items-center gap-2">
+                          <span className="uppercase text-[11px] font-bold text-slate-500 dark:text-slate-400 tracking-wider">
+                            TOTAL HISTÓRICO
+                          </span>
+                          <span className="text-[11px] font-normal text-slate-500">
+                            ({balanceSummary.monthCount}{' '}
+                            {balanceSummary.monthCount === 1 ? 'mês' : 'meses'})
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                        {formatBRL(balanceSummary.totalIncome)}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-bold text-rose-500">
+                        {formatBRL(balanceSummary.totalExpense)}
+                      </td>
+                      <td
+                        className={`py-3.5 px-4 text-right font-bold ${
+                          balanceSummary.netBalance >= 0
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-rose-500'
+                        }`}
+                      >
+                        {formatBRL(balanceSummary.netBalance)}
+                      </td>
+                      <td
+                        className={`py-3.5 px-4 text-right font-bold ${
+                          balanceSummary.lastAccumulated >= 0
+                            ? 'text-slate-900 dark:text-slate-100'
+                            : 'text-rose-500'
+                        }`}
+                      >
+                        {formatBRL(balanceSummary.lastAccumulated)}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>

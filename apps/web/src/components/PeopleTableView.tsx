@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Users,
   Search,
@@ -61,6 +61,31 @@ export function PeopleTableView({
     }
     return true;
   });
+
+  // Resumo responsivo dos contatos filtrados
+  const peopleSummary = useMemo(() => {
+    let totalToReceive = 0;
+    let totalToPay = 0;
+    let totalNet = 0;
+    let withPendingCount = 0;
+
+    for (const p of filteredPeople) {
+      totalToReceive += p.toReceive || 0;
+      totalToPay += p.toPay || 0;
+      totalNet += p.netBalance || 0;
+      if ((p.toReceive || 0) > 0 || (p.toPay || 0) > 0) {
+        withPendingCount++;
+      }
+    }
+
+    return {
+      count: filteredPeople.length,
+      totalToReceive,
+      totalToPay,
+      totalNet,
+      withPendingCount,
+    };
+  }, [filteredPeople]);
 
   return (
     <div className="space-y-5 animate-in fade-in duration-200">
@@ -341,6 +366,49 @@ export function PeopleTableView({
                 </tr>
               )}
             </tbody>
+            {/* Linha de Totais da Tabela (Responsiva ao filtro ativo) */}
+            <tfoot className="border-t-2 border-slate-300 dark:border-slate-700 bg-slate-50/95 dark:bg-slate-900/95 font-medium text-xs">
+              <tr>
+                <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-700 dark:text-slate-200 uppercase text-xs tracking-wider">
+                      TOTAL
+                    </span>
+                    <span className="font-semibold text-slate-600 dark:text-slate-300">
+                      {peopleSummary.count} {peopleSummary.count === 1 ? 'contato' : 'contatos'}
+                    </span>
+                  </div>
+                </td>
+                <td className="py-3.5 px-4 text-xs text-slate-400 dark:text-slate-600">
+                  —
+                </td>
+                <td className="py-3.5 px-4 text-xs font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                  {peopleSummary.withPendingCount} com pendências
+                </td>
+                <td className="py-3.5 px-4 text-right font-bold text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                  {formatBRL(peopleSummary.totalToReceive)}
+                </td>
+                <td className="py-3.5 px-4 text-right font-bold text-xs text-rose-500 whitespace-nowrap">
+                  {formatBRL(peopleSummary.totalToPay)}
+                </td>
+                <td className="py-3.5 px-4 text-right font-bold text-xs whitespace-nowrap">
+                  <span
+                    className={
+                      peopleSummary.totalNet > 0
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : peopleSummary.totalNet < 0
+                        ? 'text-rose-500'
+                        : 'text-slate-400'
+                    }
+                  >
+                    {formatBRL(peopleSummary.totalNet)}
+                  </span>
+                </td>
+                <td className="py-3.5 px-4 text-center text-xs text-slate-400 dark:text-slate-600">
+                  —
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
 
@@ -417,6 +485,47 @@ export function PeopleTableView({
               Nenhum contato encontrado.
             </div>
           )}
+
+          {/* Resumo Rodapé Mobile */}
+          <div className="p-3.5 border-t-2 border-slate-200 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-900/95 flex flex-col gap-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-300">
+              <div className="flex items-center gap-2">
+                <span className="uppercase text-[11px] font-bold text-slate-400 tracking-wider">
+                  Total
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-800 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  {peopleSummary.count} {peopleSummary.count === 1 ? 'contato' : 'contatos'}
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                {peopleSummary.withPendingCount} com pendências
+              </span>
+            </div>
+            <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-800/60 text-xs">
+              <div className="flex items-center gap-2 text-[11px]">
+                <span className="text-amber-600 dark:text-amber-400 font-bold" title="A Receber">
+                  +{formatBRL(peopleSummary.totalToReceive)}
+                </span>
+                <span className="text-slate-400">•</span>
+                <span className="text-rose-500 font-bold" title="A Pagar">
+                  -{formatBRL(peopleSummary.totalToPay)}
+                </span>
+              </div>
+              <div className="text-right font-bold">
+                <span
+                  className={
+                    peopleSummary.totalNet > 0
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : peopleSummary.totalNet < 0
+                      ? 'text-rose-500'
+                      : 'text-slate-400'
+                  }
+                >
+                  {formatBRL(peopleSummary.totalNet)}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
