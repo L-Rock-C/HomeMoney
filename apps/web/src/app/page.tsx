@@ -1372,7 +1372,11 @@ export default function HomePage() {
                   </div>
 
                   <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-1">
-                    {pendingTransfers[0].sender?.name} registrou {formatBRL(pendingTransfers[0].amount)} (&ldquo;{pendingTransfers[0].description}&rdquo;)
+                    {pendingTransfers[0].sender?.name}{' '}
+                    {pendingTransfers[0].type === 'EXPENSE'
+                      ? 'sugeriu reembolso de'
+                      : 'registrou'}{' '}
+                    {formatBRL(pendingTransfers[0].amount)} (&ldquo;{pendingTransfers[0].description}&rdquo;)
                   </h4>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     Clique para reconhecer esta movimentação e aceitar o lançamento no seu extrato ou recusar.

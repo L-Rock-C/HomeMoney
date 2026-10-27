@@ -61,9 +61,22 @@ export function TransferRecognitionModal({
     }
   }, [pendingTransfers.length, currentIndex]);
 
-  if (!isOpen || pendingTransfers.length === 0) return null;
-
   const currentItem = pendingTransfers[currentIndex] || pendingTransfers[0];
+
+  // Auto-ajusta o targetType de acordo com o tipo da transferência recebida
+  useEffect(() => {
+    if (currentItem) {
+      if (currentItem.type === 'EXPENSE' || currentItem.type === 'SETTLEMENT') {
+        setTargetType('INCOME');
+      } else if (currentItem.type === 'REIMBURSEMENT') {
+        setTargetType('EXPENSE');
+      } else {
+        setTargetType('INCOME');
+      }
+    }
+  }, [currentItem?.id, currentItem?.type]);
+
+  if (!isOpen || pendingTransfers.length === 0) return null;
   if (!currentItem) return null;
 
   const totalItems = pendingTransfers.length;
@@ -186,9 +199,21 @@ export function TransferRecognitionModal({
               </div>
 
               <div className="text-right">
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                  {currentItem.type === 'REIMBURSEMENT'
-                    ? 'Reembolso'
+                <span
+                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                    currentItem.type === 'EXPENSE'
+                      ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
+                      : currentItem.type === 'REIMBURSEMENT'
+                      ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
+                      : currentItem.type === 'SETTLEMENT'
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                      : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  {currentItem.type === 'EXPENSE'
+                    ? 'Sugestão de Reembolso'
+                    : currentItem.type === 'REIMBURSEMENT'
+                    ? 'Despesa Compartilhada'
                     : currentItem.type === 'SETTLEMENT'
                     ? 'Acerto de Contas'
                     : currentItem.type === 'INCOME'
@@ -222,6 +247,21 @@ export function TransferRecognitionModal({
                 </p>
               )}
             </div>
+
+            {/* Mensagem explicativa caso seja uma despesa vinculada pelo remetente */}
+            {currentItem.type === 'EXPENSE' && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-bold">
+                    Sugestão de Reembolso ({currentItem.sender?.name || 'Contato'})
+                  </p>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                    {currentItem.sender?.name || 'O contato'} registrou esta despesa vinculada a você (ex: você adiantou o pagamento por ele). Ao aceitar, o valor entra como <strong>reembolso recebido</strong> (+{formatBRL(currentItem.amount)}) na sua carteira.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Metadados adicionais */}
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200/60 dark:border-slate-800/60">

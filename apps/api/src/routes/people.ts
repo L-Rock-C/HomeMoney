@@ -48,9 +48,12 @@ export const peopleRoutes: FastifyPluginAsync = async (app) => {
       let pendingCount = 0;
 
       for (const t of p.transactions) {
-        if (t.type === 'REIMBURSEMENT' || t.type === 'EXPENSE') {
-          if (!t.paid) {
+        if (!t.paid) {
+          if (t.type === 'REIMBURSEMENT') {
             toReceive += t.amount;
+            pendingCount += 1;
+          } else if (t.type === 'EXPENSE') {
+            toPay += t.amount;
             pendingCount += 1;
           }
         }

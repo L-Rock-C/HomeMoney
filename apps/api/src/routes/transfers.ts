@@ -125,7 +125,7 @@ export const transfersRoutes: FastifyPluginAsync = async (app) => {
         const { targetType } = (request.body as any) || {};
         const finalType = targetType === 'INCOME' || targetType === 'EXPENSE'
           ? targetType
-          : (notification.type === 'INCOME' || notification.type === 'SETTLEMENT' ? 'INCOME' : 'EXPENSE');
+          : (notification.type === 'INCOME' || notification.type === 'SETTLEMENT' || notification.type === 'EXPENSE' ? 'INCOME' : 'EXPENSE');
         const isInc = finalType === 'INCOME';
 
         // Encontra ou cria categoria correspondente com isIncome adequado
@@ -162,7 +162,7 @@ export const transfersRoutes: FastifyPluginAsync = async (app) => {
         // Cria a transação correspondente no extrato do destinatário
         await prisma.transaction.create({
           data: {
-            description: `${notification.description} (${isInc ? 'Recebido de' : 'Reembolso de'} ${notification.sender.name})`,
+            description: `${notification.description} (${isInc ? 'Reembolso recebido de' : 'Reembolso pago a'} ${notification.sender.name})`,
             amount: notification.amount,
             type: finalType,
             purchaseDate: notification.date,
