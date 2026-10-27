@@ -1,8 +1,25 @@
 'use client';
 
+export type SupportedBank =
+  | 'Nubank'
+  | 'BB'
+  | 'Caixa'
+  | 'Bradesco'
+  | 'Santander'
+  | 'Inter'
+  | 'Itaú'
+  | 'C6 Bank'
+  | 'PicPay'
+  | 'Mercado Pago'
+  | 'PagBank'
+  | 'BTG Pactual'
+  | 'Neon'
+  | 'Sicoob'
+  | 'Sicredi';
+
 export interface BankNotification {
   id: string;
-  bank: 'Nubank' | 'BB' | 'Caixa' | 'Bradesco' | 'Santander' | 'Inter';
+  bank: SupportedBank;
   bankColor: string;
   type: 'EXPENSE' | 'INCOME';
   amount: number;
@@ -294,13 +311,355 @@ export const BANK_RULES: BankRule[] = [
       },
     ],
   },
+
+  // 7. ITAÚ / ITI
+  {
+    bank: 'Itaú',
+    color: '#EC7000',
+    packages: ['com.itau', 'com.itau.cartoes', 'com.iti.iti'],
+    patterns: [
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /(?:recebeu|recebida|recebido|recebimento).*?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência Itaú'),
+        }),
+      },
+      {
+        type: 'EXPENSE',
+        method: 'Pix',
+        regex: /Pix\s+(?:enviado|realizado).*?(?:valor\s+de\s+)?R\$\s*([0-9.,]+)\s+para\s+([^.]+?)(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+      {
+        type: 'EXPENSE',
+        method: 'Crédito',
+        regex: /(?:compra|pagamento).*?aprovad[ao].*?R\$\s*([0-9.,]+).*?(?:em|no|na)\s+([^.]+?)(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+    ],
+  },
+
+  // 8. C6 BANK
+  {
+    bank: 'C6 Bank',
+    color: '#242424',
+    packages: ['com.c6bank.app'],
+    patterns: [
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /(?:recebeu|recebido).*?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência C6 Bank'),
+        }),
+      },
+      {
+        type: 'EXPENSE',
+        method: 'Pix',
+        regex: /(?:transferiu|enviou|pix).*?R\$\s*([0-9.,]+)\s+para\s+([^.]+?)(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+      {
+        type: 'EXPENSE',
+        method: 'Crédito',
+        regex: /compra\s+aprovada.*?R\$\s*([0-9.,]+)\s+em\s+([^.]+?)(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+    ],
+  },
+
+  // 9. PICPAY
+  {
+    bank: 'PicPay',
+    color: '#11C76F',
+    packages: ['com.picpay'],
+    patterns: [
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /(?:recebeu|te\s+enviou).*?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência PicPay'),
+        }),
+      },
+      {
+        type: 'EXPENSE',
+        method: 'Pix',
+        regex: /(?:pagou|enviou|transferiu).*?R\$\s*([0-9.,]+)\s+para\s+([^.]+?)(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+      {
+        type: 'EXPENSE',
+        method: 'Crédito',
+        regex: /pagamento\s+aprovado.*?R\$\s*([0-9.,]+)\s+em\s+([^.]+?)(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+    ],
+  },
+
+  // 10. MERCADO PAGO
+  {
+    bank: 'Mercado Pago',
+    color: '#009EE3',
+    packages: ['com.mercadopago.wallet'],
+    patterns: [
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /(?:recebeu|voc[eê]\s+recebeu).*?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência Mercado Pago'),
+        }),
+      },
+      {
+        type: 'EXPENSE',
+        method: 'Pix',
+        regex: /(?:enviou|transferiu|pagou).*?R\$\s*([0-9.,]+)\s+para\s+([^.]+?)(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+      {
+        type: 'EXPENSE',
+        method: 'Crédito',
+        regex: /compra\s+aprovada.*?R\$\s*([0-9.,]+)\s+em\s+([^.]+?)(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+    ],
+  },
+
+  // 11. PAGBANK
+  {
+    bank: 'PagBank',
+    color: '#00B488',
+    packages: ['br.com.uol.ps'],
+    patterns: [
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /(?:recebeu|recebido).*?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência PagBank'),
+        }),
+      },
+      {
+        type: 'EXPENSE',
+        method: 'Pix',
+        regex: /(?:enviou|transferiu|pagou).*?R\$\s*([0-9.,]+)\s+para\s+([^.]+?)(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+    ],
+  },
+
+  // 12. BTG PACTUAL
+  {
+    bank: 'BTG Pactual',
+    color: '#0A1C3C',
+    packages: ['com.btg.pactual.banking'],
+    patterns: [
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /(?:recebeu|recebido).*?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência BTG Pactual'),
+        }),
+      },
+      {
+        type: 'EXPENSE',
+        method: 'Pix',
+        regex: /(?:enviou|transferiu|pagou).*?R\$\s*([0-9.,]+)\s+para\s+([^.]+?)(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+    ],
+  },
+
+  // 13. NEON
+  {
+    bank: 'Neon',
+    color: '#00E5FF',
+    packages: ['br.com.neon'],
+    patterns: [
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /(?:recebeu|recebido).*?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência Neon'),
+        }),
+      },
+      {
+        type: 'EXPENSE',
+        method: 'Pix',
+        regex: /(?:enviou|transferiu|pagou).*?R\$\s*([0-9.,]+)\s+para\s+([^.]+?)(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+    ],
+  },
+
+  // 14. SICOOB
+  {
+    bank: 'Sicoob',
+    color: '#003641',
+    packages: ['br.com.sicoob.netbr'],
+    patterns: [
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /(?:recebeu|recebido).*?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência Sicoob'),
+        }),
+      },
+      {
+        type: 'EXPENSE',
+        method: 'Pix',
+        regex: /(?:enviou|transferiu|pagou).*?R\$\s*([0-9.,]+)\s+para\s+([^.]+?)(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+    ],
+  },
+
+  // 15. SICREDI
+  {
+    bank: 'Sicredi',
+    color: '#43B02A',
+    packages: ['br.com.sicredi.mobile'],
+    patterns: [
+      {
+        type: 'INCOME',
+        method: 'Pix',
+        regex: /(?:recebeu|recebido).*?R\$\s*([0-9.,]+)(?:\s+de\s+([^.]+?))?(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2] || 'Transferência Sicredi'),
+        }),
+      },
+      {
+        type: 'EXPENSE',
+        method: 'Pix',
+        regex: /(?:enviou|transferiu|pagou).*?R\$\s*([0-9.,]+)\s+para\s+([^.]+?)(?:\.|$)/i,
+        extract: (m) => ({
+          amount: parseBRLAmount(m[1]),
+          targetOrSource: cleanName(m[2]),
+        }),
+      },
+    ],
+  },
 ];
 
-// Helper: parse string amount like "80,00" or "1.250,50" to float
-function parseBRLAmount(str: string): number {
+// Helper: parse string amount like "80,00", "1.250,50", "20.50" (English/international locale) to float
+export function parseBRLAmount(rawStr: string | number): number {
+  if (typeof rawStr === 'number') return isNaN(rawStr) ? 0 : rawStr;
+  if (!rawStr) return 0;
+  let str = String(rawStr).trim();
+
+  // Remove non-numeric prefixes/suffixes except separators
+  str = str.replace(/^[^\d.,]+/, '').replace(/[^\d.,]+$/, '').trim();
   if (!str) return 0;
-  const cleaned = str.replace(/\./g, '').replace(',', '.');
-  return parseFloat(cleaned) || 0;
+
+  const hasComma = str.includes(',');
+  const hasDot = str.includes('.');
+
+  // Case 1: Both comma and dot are present (e.g. "1.250,50" or "1,250.50")
+  if (hasComma && hasDot) {
+    const lastComma = str.lastIndexOf(',');
+    const lastDot = str.lastIndexOf('.');
+    if (lastComma > lastDot) {
+      // "1.250,50" -> dot is thousand separator, comma is decimal
+      str = str.replace(/\./g, '').replace(',', '.');
+    } else {
+      // "1,250.50" -> comma is thousand separator, dot is decimal
+      str = str.replace(/,/g, '');
+    }
+    return parseFloat(str) || 0;
+  }
+
+  // Case 2: Only comma is present (e.g. "20,50", "1250,50", "1,000")
+  if (hasComma && !hasDot) {
+    const parts = str.split(',');
+    if (parts.length === 2) {
+      const decimals = parts[1];
+      // If 1 or 2 digits after comma, it's decimal (cents: 20,50 or 20,5)
+      if (decimals.length === 1 || decimals.length === 2) {
+        str = parts[0] + '.' + decimals;
+      } else if (decimals.length === 3) {
+        // e.g. "1,000" (thousand separator without decimals)
+        str = parts[0] + decimals;
+      } else {
+        str = str.replace(',', '.');
+      }
+    } else {
+      str = str.replace(/,/g, '');
+    }
+    return parseFloat(str) || 0;
+  }
+
+  // Case 3: Only dot is present (e.g. "20.50", "1250.50", "1.000", "1.000.000")
+  if (hasDot && !hasComma) {
+    const parts = str.split('.');
+    if (parts.length === 2) {
+      const decimals = parts[1];
+      // If 1 or 2 digits after dot, it's decimal (cents: 20.50 or 20.5 on English phone)
+      if (decimals.length === 1 || decimals.length === 2) {
+        str = parts[0] + '.' + decimals;
+      } else if (decimals.length === 3) {
+        // e.g. "1.000" -> thousand separator in pt-BR
+        str = parts[0] + decimals;
+      } else {
+        str = str.replace(/\./g, '');
+      }
+    } else {
+      str = str.replace(/\./g, '');
+    }
+    return parseFloat(str) || 0;
+  }
+
+  return parseFloat(str) || 0;
 }
 
 // ============================================================================
@@ -357,6 +716,56 @@ function cleanName(str: string): string {
 }
 
 // ============================================================================
+// Filtros Estritos de Transações e Não-Transações
+// ============================================================================
+
+/**
+ * Padrão de exclusão: Rejeita sugestões de empréstimos, aumentos de limites,
+ * faturas fechadas (sem pagamento efetuado), investimentos, tokens e marketing.
+ */
+export const NON_TRANSACTION_EXCLUSION_REGEX =
+  /\b(?:empr[eé]stimo|empr[eé]stimos|pr[eé][- ]?aprovad[ao]|simule|simular|simula[cç][aã]o|dinheiro\s+extra|grana\s+extra|cr[eé]dito\s+pessoal|cr[eé]dito\s+para\s+voc[eê]|cr[eé]dito\s+dispon[ií]vel|contrate\s+agora|contratar|pegue\s+at[eé]|taxa\s+reduzida|taxas?\s+especia(?:l|is)|refinanciamento|renegocia[cç][aã]o|quite\s+suas?\s+d[ií]vidas?|aumentamos\s+seu\s+limite|aumento\s+de\s+limite|limite\s+aumentad[ao]|novo\s+limite|ajustar\s+limite|ajuste\s+de\s+limite|limite\s+liberado|pe[cç]a\s+seu\s+cart[aã]o|cart[aã]o\s+a\s+caminho|cart[aã]o\s+chegou|desbloqueie\s+seu\s+cart[aã]o|cart[aã]o\s+aprovado|anuidade\s+gr[aá]tis|sem\s+anuidade|fatura\s+fechou|fechamento\s+d[ea]\s+fatura|fatura\s+fechada|sua\s+fatura\s+vence|lembrete\s+de\s+fatura|lembrete\s+de\s+vencimento|sua\s+fatura\s+est[aá]\s+dispon[ií]vel|fatura\s+dispon[ií]vel|resumo\s+da\s+fatura|invista\s+a\s+partir|comece\s+a\s+investir|seguro\s+de\s+vida|seguro\s+celular|seguro\s+residencial|seguro\s+auto|guarde\s+seu\s+dinheiro|guarde\s+a\s+partir|conhe[cç]a\s+as?\s+caixinhas?|informe\s+de\s+rendimentos|imposto\s+de\s+renda|c[oó]digo\s+de\s+seguran[cç]a|c[oó]digo\s+de\s+verifica[cç][aã]o|c[oó]digo\s+de\s+valida[cç][aã]o|c[oó]digo\s+de\s+autoriza[cç][aã]o|i[- ]?safe|chave\s+de\s+seguran[cç]a|token|novo\s+acesso|acesso\s+identificado|dispositivo\s+desconhecido|login\s+suspeito|senha\s+alterada|dados\s+cadastrais|atualize\s+seu\s+app|cashback\s+no\s+shopping|shopping\s+nu|shopping\s+inter|aproveite\s+a\s+promo[cç][aã]o|oferta\s+exclusiva|desconto\s+exclusivo|cupom|indique\s+e\s+ganhe|indique\s+um\s+amigo|pesquisa\s+de\s+satisfa[cç][aã]o|avalie\s+nosso\s+app|pix\s+agendado|transfer[eê]ncia\s+agendada|pagamento\s+agendado|agendado\s+com\s+sucesso)\b/i;
+
+/**
+ * Padrão de ação de transação positiva: Pix recebido/enviado, compra no cartão,
+ * pagamento de boleto/conta, saque, depósito/salário creditado.
+ */
+export const TRANSACTION_ACTION_REGEX =
+  /(?:recebeu\s+(?:uma\s+transfer[eê]ncia|um\s+pix|dinheiro)|pix\s+recebido|transfer[eê]ncia\s+recebida|te\s+enviou\s+(?:um\s+pix|uma\s+transfer[eê]ncia|R\$)|recebimento\s+de\s+pix|dep[oó]sito\s+recebido|sal[aá]rio\s+(?:creditado|depositado)|cr[eé]dito\s+em\s+conta|transferiu|transfer[eê]ncia\s+(?:enviada|realizada)|pix\s+(?:enviado|realizado)|(?:voc[eê]|voce)?\s*pagou.*?no\s+pix|enviou\s+um\s+pix|compra\s+(?:de\s+R\$|aprovada|realizada|no\s+cr[eé]dito|no\s+d[eé]bito|com\s+cart[aã]o)|pagamento\s+aprovado|pagamento\s+(?:de\s+boleto|efetuado|confirmado|realizado)|boleto\s+pago|pagamento\s+d[ea]\s+fatura\s+(?:efetuado|confirmado|recebido|realizado)|saque\s+(?:realizado|efetuado|de\s+R\$))/i;
+
+/**
+ * Validação rigorosa para garantir que o texto é estritamente uma transação financeira real.
+ */
+export function isStrictTransactionNotification(text: string, title?: string): boolean {
+  const combined = `${title || ''} ${text || ''}`.trim();
+  if (!combined) return false;
+
+  // 1. Rejeita se bater com termos de exclusão (marketing, empréstimo, limite, senha, etc.)
+  if (NON_TRANSACTION_EXCLUSION_REGEX.test(combined)) {
+    return false;
+  }
+
+  // 2. Deve conter valor monetário válido
+  const moneyMatch =
+    combined.match(/R\$\s*([0-9.,]+)/i) ||
+    combined.match(/([0-9]{1,3}(?:[.,][0-9]{3})*[.,][0-9]{2})/);
+  if (!moneyMatch) {
+    return false;
+  }
+  const amount = parseBRLAmount(moneyMatch[1] || moneyMatch[0]);
+  if (amount <= 0) {
+    return false;
+  }
+
+  // 3. Deve conter verbo / ação concreta de transação
+  if (!TRANSACTION_ACTION_REGEX.test(combined)) {
+    return false;
+  }
+
+  return true;
+}
+
+// ============================================================================
 // Parser Universal de Notificações Bancárias
 // ============================================================================
 export function parseBankNotificationText(
@@ -365,6 +774,13 @@ export function parseBankNotificationText(
   dateOverride?: string,
   timeOverride?: string
 ): BankNotification | null {
+  if (!text) return null;
+
+  // 1. FILTRO ESTRITO: Descarta imediatamente se não for estritamente uma transação financeira
+  if (!isStrictTransactionNotification(text)) {
+    return null;
+  }
+
   const now = new Date();
   const dateStr = dateOverride || now.toISOString().split('T')[0];
   const timeStr =
@@ -406,11 +822,13 @@ export function parseBankNotificationText(
   }
 
   // ============================================================================
-  // Fallback Universal: Captura qualquer notificação bancária com valor em R$
+  // Fallback Universal: Apenas para mensagens que passaram no filtro estrito
   // ============================================================================
-  const moneyMatch = text.match(/R\$\s*([0-9.,]+)/i) || text.match(/([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})/);
+  const moneyMatch =
+    text.match(/R\$\s*([0-9.,]+)/i) ||
+    text.match(/([0-9]{1,3}(?:[.,][0-9]{3})*[.,][0-9]{2})/);
   if (moneyMatch) {
-    const amount = parseBRLAmount(moneyMatch[1]);
+    const amount = parseBRLAmount(moneyMatch[1] || moneyMatch[0]);
     if (amount > 0) {
       const isIncome = /(?:recebeu|recebida|recebido|recebimento|cr[eé]dito\s+em\s+conta|depositado|dep[oó]sito|reembolso|te\s+enviou)/i.test(text);
       let targetOrSource = isIncome ? 'Transferência Recebida' : 'Transferência Enviada';
@@ -469,8 +887,27 @@ export function getStoredNotifications(): BankNotification[] {
     const list: BankNotification[] = JSON.parse(raw);
     let updated = false;
     const sanitized = list.map((item) => {
-      // Auto-correção caso haja notificações no histórico com tipo ou nome desatualizado:
-      if (item.rawText && /(?:recebeu|recebida|recebido|te\s+enviou)/i.test(item.rawText)) {
+      // Auto-correção caso haja notificações no histórico com tipo, valor ou nome desatualizado:
+      if (item.rawText && item.status === 'PENDING') {
+        const reParsed = parseBankNotificationText(item.rawText, item.bank, item.date, item.time);
+        if (
+          reParsed &&
+          (Math.abs(reParsed.amount - item.amount) > 0.001 ||
+            reParsed.formattedAmount !== item.formattedAmount ||
+            reParsed.type !== item.type ||
+            reParsed.targetOrSource !== item.targetOrSource)
+        ) {
+          updated = true;
+          return {
+            ...item,
+            type: reParsed.type,
+            targetOrSource: reParsed.targetOrSource,
+            paymentMethod: reParsed.paymentMethod,
+            amount: reParsed.amount,
+            formattedAmount: reParsed.formattedAmount,
+          };
+        }
+      } else if (item.rawText && /(?:recebeu|recebida|recebido|te\s+enviou)/i.test(item.rawText)) {
         if (item.type !== 'INCOME' || item.targetOrSource.toLowerCase().includes('lima de lucena')) {
           const reParsed = parseBankNotificationText(item.rawText, item.bank, item.date, item.time);
           if (reParsed) {
@@ -650,23 +1087,29 @@ export function requestAndroidNotificationPermission(): void {
   }
 }
 
-function createFallbackBankNotification(item: any, status: 'PENDING' | 'DISMISSED'): BankNotification {
+function createFallbackBankNotification(item: any, status: 'PENDING' | 'DISMISSED'): BankNotification | null {
   const bank = (item.bank as BankNotification['bank']) || 'Nubank';
   const bankRule = BANK_RULES.find((b) => b.bank === bank) || BANK_RULES[0];
   const now = new Date();
   const dateStr = item.date || now.toISOString().split('T')[0];
   const timeStr = item.time || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  const text = item.text || item.title || 'Notificação Bancária';
+  const text = item.text || item.title || '';
   const title = item.title || '';
   const combined = title ? `${title} ${text}` : text;
 
-  const numberMatch = combined.match(/R\$\s*([0-9.,]+)/i) || combined.match(/([0-9]+[.,][0-9]{2})/);
-  const amount = numberMatch ? parseBRLAmount(numberMatch[1]) : 0;
-  const formattedAmount = amount > 0
-    ? amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-    : '0,00';
+  // FILTRO ESTRITO: se não for transação financeira real, retorna null
+  if (!isStrictTransactionNotification(combined)) {
+    return null;
+  }
 
-  const isIncome = /(?:recebeu|recebida|recebido|crédito|depositado|reembolso|te\s+enviou)/i.test(combined);
+  const numberMatch =
+    combined.match(/R\$\s*([0-9.,]+)/i) ||
+    combined.match(/([0-9]{1,3}(?:[.,][0-9]{3})*[.,][0-9]{2})/);
+  const amount = numberMatch ? parseBRLAmount(numberMatch[1] || numberMatch[0]) : 0;
+  if (amount <= 0) return null;
+  const formattedAmount = amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const isIncome = /(?:recebeu|recebida|recebido|crédito\s+em\s+conta|depositado|reembolso|te\s+enviou)/i.test(combined);
 
   return {
     id: item.id || `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -696,6 +1139,12 @@ export function processIncomingAndroidNotificationItems(items: any[]) {
     const title = item.title || '';
     const fullText = title ? `${title}: ${text}` : text;
 
+    // Filtro Estrito: Verifica se a notificação é de fato uma transação bancária
+    if (!isStrictTransactionNotification(text, title) && !isStrictTransactionNotification(fullText)) {
+      console.log('Notificação ignorada pelo filtro estrito de transação:', fullText);
+      continue;
+    }
+
     let notif =
       parseBankNotificationText(
         text,
@@ -714,10 +1163,12 @@ export function processIncomingAndroidNotificationItems(items: any[]) {
         item.bank as BankNotification['bank'],
         item.date,
         item.time
-      );
+      ) ||
+      createFallbackBankNotification(item, 'PENDING');
 
     if (!notif) {
-      notif = createFallbackBankNotification(item, 'PENDING');
+      console.log('Notificação bancária descartada (não é transação):', fullText);
+      continue;
     }
 
     if (item.id) {
@@ -805,10 +1256,12 @@ if (typeof window !== 'undefined') {
             let dismissedNotif =
               parseBankNotificationText(text, item.bank as BankNotification['bank'], item.date, item.time) ||
               createFallbackBankNotification(item, 'DISMISSED');
-            dismissedNotif.status = 'DISMISSED';
-            dismissedNotif.dismissedAt = new Date().toISOString();
-            if (notifId) dismissedNotif.id = notifId;
-            saveStoredNotifications([dismissedNotif, ...getStoredNotifications()]);
+            if (dismissedNotif) {
+              dismissedNotif.status = 'DISMISSED';
+              dismissedNotif.dismissedAt = new Date().toISOString();
+              if (notifId) dismissedNotif.id = notifId;
+              saveStoredNotifications([dismissedNotif, ...getStoredNotifications()]);
+            }
           }
         }
         window.dispatchEvent(new Event('homemoney_queue_updated'));

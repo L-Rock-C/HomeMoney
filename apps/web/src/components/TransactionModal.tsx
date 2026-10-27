@@ -24,6 +24,7 @@ import {
   createPerson,
   createAccount,
 } from '../lib/api';
+import { parseBRLAmount } from '../lib/bankNotificationService';
 import { TextInput, CurrencyInput, Checkbox, SelectDropdown } from './ui/FormControls';
 
 interface TransactionModalProps {
@@ -167,7 +168,7 @@ export function TransactionModal({
     setLoading(true);
 
     try {
-      const numAmount = parseFloat(amount.replace(',', '.'));
+      const numAmount = parseBRLAmount(amount);
       if (isNaN(numAmount) || numAmount <= 0) {
         throw new Error('Informe um valor válido maior que zero');
       }
@@ -214,7 +215,7 @@ export function TransactionModal({
     }
   }
 
-  const numAmount = parseFloat(amount.replace(',', '.')) || 0;
+  const numAmount = parseBRLAmount(amount);
   const installmentsNum = Math.max(1, parseInt(String(totalInstallments), 10) || 1);
   const installmentPreview = installmentsNum > 1 && numAmount > 0 ? (numAmount / installmentsNum).toFixed(2).replace('.', ',') : null;
 

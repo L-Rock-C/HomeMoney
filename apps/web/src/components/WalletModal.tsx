@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { createAccount, updateAccount, deleteAccount } from '../lib/api';
+import { parseBRLAmount } from '../lib/bankNotificationService';
 import { TextInput, CurrencyInput } from './ui/FormControls';
 
 interface WalletModalProps {
@@ -110,7 +111,7 @@ export function WalletModal({
       return;
     }
 
-    const cleanBalance = parseFloat(initialBalance.replace(/\./g, '').replace(',', '.')) || 0;
+    const cleanBalance = parseBRLAmount(initialBalance);
 
     setLoading(true);
     setError(null);

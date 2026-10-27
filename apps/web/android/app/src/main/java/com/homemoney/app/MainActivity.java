@@ -408,8 +408,10 @@ public class MainActivity extends BridgeActivity {
                     flags
                 );
 
+                int appIcon = context.getApplicationInfo().icon != 0 ? context.getApplicationInfo().icon : R.mipmap.ic_launcher;
+
                 androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(context, channelId)
-                    .setSmallIcon(android.R.drawable.stat_notify_more)
+                    .setSmallIcon(appIcon)
                     .setContentTitle("Transferência de " + senderName + " (" + amountStr + ")")
                     .setContentText(description != null && !description.isEmpty() ? description : "Toque para reconhecer e aceitar ou negar.")
                     .setStyle(new androidx.core.app.NotificationCompat.BigTextStyle()

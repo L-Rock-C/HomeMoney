@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, HandCoins, CheckCircle2, Calendar, CheckSquare, Square, AlertCircle, ArrowRight } from 'lucide-react';
 import { settleDebt, fetchPersonPendingTransactions } from '../lib/api';
+import { parseBRLAmount } from '../lib/bankNotificationService';
 import { SelectDropdown } from './ui/FormControls';
 
 interface SettleModalProps {
@@ -105,7 +106,7 @@ export function SettleModal({ isOpen, onClose, onSuccess, person, accounts }: Se
     .reduce((sum, t) => sum + t.amount, 0);
 
   // Parse custom amount numeric value
-  const parsedCustomAmount = parseFloat(customAmount.replace(/\./g, '').replace(',', '.')) || 0;
+  const parsedCustomAmount = parseBRLAmount(customAmount);
 
   const formatBRL = (val: number) =>
     val?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00';

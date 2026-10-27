@@ -42,6 +42,7 @@ import {
   EyeOff,
   ArrowRight,
   FlaskConical,
+  CalendarClock,
 } from 'lucide-react';
 import {
   fetchMonthlyReports,
@@ -74,6 +75,7 @@ import { TransferRecognitionModal } from '../components/TransferRecognitionModal
 import { DevSimulatorView } from '../components/DevSimulatorView';
 import { TransactionDetailModal } from '../components/TransactionDetailModal';
 import { PeopleTableView } from '../components/PeopleTableView';
+import { PlannedExpensesView } from '../components/PlannedExpensesView';
 import { HomeMoneyLogo } from '../components/HomeMoneyLogo';
 import { CategoryDonutChart, MonthlyBarChart } from '../components/FinanceCharts';
 import { SelectDropdown } from '../components/ui/FormControls';
@@ -195,7 +197,7 @@ export default function HomePage() {
 
   // App data states
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'TRANSACTIONS' | 'BALANCE' | 'PEOPLE' | 'WALLETS' | 'PROFILE' | 'SUGGESTIONS' | 'MANAGER' | 'DEV_SIMULATOR'>('DASHBOARD');
+  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'TRANSACTIONS' | 'PLANNED_EXPENSES' | 'BALANCE' | 'PEOPLE' | 'WALLETS' | 'PROFILE' | 'SUGGESTIONS' | 'MANAGER' | 'DEV_SIMULATOR'>('DASHBOARD');
   const [showTransactionKPIs, setShowTransactionKPIs] = useState(false);
   const [showWalletKPIs, setShowWalletKPIs] = useState(false);
   const [selectedDetailTransaction, setSelectedDetailTransaction] = useState<any | null>(null);
@@ -691,6 +693,8 @@ export default function HomePage() {
     return matchesSearch && matchesType && matchesAccount;
   });
 
+  const pendingExpensesCount = transactions.filter((t) => !t.paid && t.type !== 'INCOME').length;
+
   const formatBRL = (val: number) =>
     val?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00';
 
@@ -811,6 +815,35 @@ export default function HomePage() {
               <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                 {filteredTransactions.length}
               </span>
+            )}
+          </button>
+
+          {/* Gastos Previstos (Compromissos Pendentes do Mês) */}
+          <button
+            onClick={() => {
+              setActiveTab('PLANNED_EXPENSES');
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center ${
+              sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-3'
+            } py-2.5 rounded-xl text-sm font-medium transition cursor-pointer ${
+              activeTab === 'PLANNED_EXPENSES'
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            }`}
+            title="Gastos Previstos (Pendentes do Mês)"
+          >
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+              <CalendarClock className="w-5 h-5 min-w-5 shrink-0 text-amber-500" />
+              {!sidebarCollapsed && <span>Gastos Previstos</span>}
+            </div>
+            {!sidebarCollapsed && pendingExpensesCount > 0 && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                {pendingExpensesCount}
+              </span>
+            )}
+            {sidebarCollapsed && pendingExpensesCount > 0 && (
+              <span className="w-2 h-2 rounded-full bg-amber-500 absolute top-2 right-2" />
             )}
           </button>
 
@@ -1153,6 +1186,7 @@ export default function HomePage() {
               <h2 className="text-sm sm:text-lg font-bold text-slate-900 dark:text-white truncate">
                 {activeTab === 'DASHBOARD' && 'Visão Geral'}
                 {activeTab === 'TRANSACTIONS' && 'Extrato de Transações'}
+                {activeTab === 'PLANNED_EXPENSES' && 'Gastos Previstos (Compromissos do Mês)'}
                 {activeTab === 'BALANCE' && 'Balanço Consolidado'}
                 {activeTab === 'PEOPLE' && 'Contatos & Acertos'}
                 {activeTab === 'WALLETS' && 'Carteiras & Poupanças'}
@@ -1324,8 +1358,8 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Filtros de Período e Indicadores KPI: Apenas em Telas de Análise Financeira (DASHBOARD, TRANSACTIONS, BALANCE) */}
-          {(activeTab === 'DASHBOARD' || activeTab === 'TRANSACTIONS' || activeTab === 'BALANCE') && (
+          {/* Filtros de Período e Indicadores KPI: Apenas em Telas de Análise Financeira (DASHBOARD, TRANSACTIONS, PLANNED_EXPENSES, BALANCE) */}
+          {(activeTab === 'DASHBOARD' || activeTab === 'TRANSACTIONS' || activeTab === 'BALANCE' || activeTab === 'PLANNED_EXPENSES') && (
             <>
 
               {/* Styled Date Search & Filter Bar */}
@@ -1490,7 +1524,7 @@ export default function HomePage() {
             </div>
           )}
 
-          {(activeTab !== 'TRANSACTIONS' || showTransactionKPIs) && (
+          {activeTab !== 'PLANNED_EXPENSES' && (activeTab !== 'TRANSACTIONS' || showTransactionKPIs) && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-150">
               <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-slate-300 dark:hover:border-slate-700 transition">
                 <div className="flex items-center justify-between mb-3">
@@ -1993,6 +2027,26 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB: Gastos Previstos (Compromissos Pendentes por Mês) */}
+          {/* ========================================================================= */}
+          {activeTab === 'PLANNED_EXPENSES' && (
+            <PlannedExpensesView
+              transactions={transactions}
+              selectedMonth={selectedMonth}
+              formatBRL={formatBRL}
+              onTogglePaid={handleTogglePaid}
+              onEdit={handleOpenEdit}
+              onDelete={handleDelete}
+              onCreate={handleOpenCreate}
+              onSelectDetail={(t) => setSelectedDetailTransaction(t)}
+              accounts={accounts}
+              categories={categories}
+              people={people}
+              onSelectMonth={handleMonthSelect}
+            />
           )}
 
           {/* ========================================================================= */}

@@ -22,6 +22,8 @@ import org.json.JSONObject;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class BankNotificationListener extends NotificationListenerService {
 
@@ -33,6 +35,196 @@ public class BankNotificationListener extends NotificationListenerService {
     public static final String CHANNEL_ID = "homemoney_bank_suggestions";
 
     public static volatile BankNotificationListener instance;
+
+    // =========================================================================
+    // Filtros Estritos de Transações e Não-Transações
+    // =========================================================================
+
+    // 1. Padrão de exclusão: Rejeita sugestões de empréstimo, ofertas, limites, faturas fechadas, segurança, etc.
+    private static final Pattern EXCLUSION_PATTERN = Pattern.compile(
+        "(?i)\\b(" +
+        // Empréstimos, financiamentos e crédito pessoal
+        "empr[eé]stimo|empr[eé]stimos|pr[eé][- ]?aprovad[ao]|simule|simular|simula[cç][aã]o|" +
+        "dinheiro\\s+extra|grana\\s+extra|cr[eé]dito\\s+pessoal|cr[eé]dito\\s+para\\s+voc[eê]|" +
+        "cr[eé]dito\\s+dispon[ií]vel|contrate\\s+agora|contratar|pegue\\s+at[eé]|taxa\\s+reduzida|" +
+        "taxas?\\s+especia(l|is)|refinanciamento|renegocia[cç][aã]o|quite\\s+suas?\\s+d[ií]vidas?|" +
+        
+        // Limite e ofertas de cartão
+        "aumentamos\\s+seu\\s+limite|aumento\\s+de\\s+limite|limite\\s+aumentad[ao]|novo\\s+limite|" +
+        "ajustar\\s+limite|ajuste\\s+de\\s+limite|limite\\s+liberado|pe[cç]a\\s+seu\\s+cart[aã]o|" +
+        "cart[aã]o\\s+a\\s+caminho|cart[aã]o\\s+chegou|desbloqueie\\s+seu\\s+cart[aã]o|cart[aã]o\\s+aprovado|" +
+        "anuidade\\s+gr[aá]tis|sem\\s+anuidade|" +
+        
+        // Fatura fechada ou vencimento (sem pagamento efetuado)
+        "fatura\\s+fechou|fechamento\\s+d[ea]\\s+fatura|fatura\\s+fechada|sua\\s+fatura\\s+vence|" +
+        "lembrete\\s+de\\s+fatura|lembrete\\s+de\\s+vencimento|sua\\s+fatura\\s+est[aá]\\s+dispon[ií]vel|" +
+        "fatura\\s+dispon[ií]vel|resumo\\s+da\\s+fatura|" +
+        
+        // Investimentos, poupança, seguros e caixinhas
+        "invista\\s+a\\s+partir|comece\\s+a\\s+investir|seguro\\s+de\\s+vida|seguro\\s+celular|" +
+        "seguro\\s+residencial|seguro\\s+auto|guarde\\s+seu\\s+dinheiro|guarde\\s+a\\s+partir|" +
+        "conhe[cç]a\\s+as?\\s+caixinhas?|informe\\s+de\\s+rendimentos|imposto\\s+de\\s+renda|" +
+        
+        // Segurança, códigos, senhas e tokens
+        "c[oó]digo\\s+de\\s+seguran[cç]a|c[oó]digo\\s+de\\s+verifica[cç][aã]o|c[oó]digo\\s+de\\s+valida[cç][aã]o|" +
+        "c[oó]digo\\s+de\\s+autoriza[cç][aã]o|i[- ]?safe|chave\\s+de\\s+seguran[cç]a|token|" +
+        "novo\\s+acesso|acesso\\s+identificado|dispositivo\\s+desconhecido|login\\s+suspeito|" +
+        "senha\\s+alterada|dados\\s+cadastrais|atualize\\s+seu\\s+app|" +
+        
+        // Promoções, cupons, cashback de shopping e marketing
+        "cashback\\s+no\\s+shopping|shopping\\s+nu|shopping\\s+inter|aproveite\\s+a\\s+promo[cç][aã]o|" +
+        "oferta\\s+exclusiva|desconto\\s+exclusivo|cupom|indique\\s+e\\s+ganhe|indique\\s+um\\s+amigo|" +
+        "pesquisa\\s+de\\s+satisfa[cç][aã]o|avalie\\s+nosso\\s+app|" +
+        
+        // Agendamento futuro (não executado ainda)
+        "pix\\s+agendado|transfer[eê]ncia\\s+agendada|pagamento\\s+agendado|agendado\\s+com\\s+sucesso" +
+        ")\\b"
+    );
+
+    // 2. Padrão monetário obrigatório (deve conter valor em R$ ou formato monetário)
+    private static final Pattern MONEY_PATTERN = Pattern.compile("(?i)(?:R\\$\\s*([0-9.,]+)|([0-9]{1,3}(?:[.,][0-9]{3})*[.,][0-9]{2}))");
+
+    // 3. Padrão de ação de transação positiva (Pix, compra no cartão, transferência, boleto pago, depósito)
+    private static final Pattern TRANSACTION_ACTION_PATTERN = Pattern.compile(
+        "(?i)(" +
+        // Pix / Transferência / Depósito Recebido
+        "recebeu\\s+(?:uma\\s+transfer[eê]ncia|um\\s+pix|dinheiro)|" +
+        "pix\\s+recebido|transfer[eê]ncia\\s+recebida|te\\s+enviou\\s+(?:um\\s+pix|uma\\s+transfer[eê]ncia|R\\$)|" +
+        "recebimento\\s+de\\s+pix|dep[oó]sito\\s+recebido|sal[aá]rio\\s+(?:creditado|depositado)|cr[eé]dito\\s+em\\s+conta|" +
+        
+        // Pix / Transferência Enviada
+        "transferiu|transfer[eê]ncia\\s+(?:enviada|realizada)|pix\\s+(?:enviado|realizado)|" +
+        "(?:voc[eê]|voce)?\\s*pagou.*?no\\s+pix|enviou\\s+um\\s+pix|" +
+        
+        // Compra no Cartão / Débito / Crédito
+        "compra\\s+(?:de\\s+R\\$|aprovada|realizada|no\\s+cr[eé]dito|no\\s+d[eé]bito|com\\s+cart[aã]o)|" +
+        "pagamento\\s+aprovado|" +
+        
+        // Pagamento de Boleto / Contas
+        "pagamento\\s+(?:de\\s+boleto|efetuado|confirmado|realizado)|boleto\\s+pago|" +
+        "pagamento\\s+d[ea]\\s+fatura\\s+(?:efetuado|confirmado|recebido|realizado)|" +
+        
+        // Saque
+        "saque\\s+(?:realizado|efetuado|de\\s+R\\$)" +
+        ")"
+    );
+
+    /**
+     * Identifica estritamente o banco emissor pelo nome do pacote do Android.
+     * Pacotes não cadastrados (como WhatsApp, Telegram, navegadores, SMS, etc.) retornam null.
+     */
+    public static String identifyBankByPackage(String pkgLower) {
+        if (pkgLower == null) return null;
+
+        // 1. Nubank
+        if (pkgLower.equals("com.nu.production") || pkgLower.startsWith("com.nu.production.") ||
+            pkgLower.equals("com.nubank") || pkgLower.startsWith("com.nubank.")) {
+            return "Nubank";
+        }
+
+        // 2. Banco do Brasil
+        if (pkgLower.equals("br.com.bb.android") || pkgLower.startsWith("br.com.bb.") ||
+            pkgLower.contains("bancodobrasil")) {
+            return "BB";
+        }
+
+        // 3. Caixa Econômica Federal
+        if (pkgLower.equals("br.com.gabba.caixa") || pkgLower.equals("br.gov.caixa.tem") ||
+            pkgLower.startsWith("br.gov.caixa.") || pkgLower.startsWith("br.com.caixa.")) {
+            return "Caixa";
+        }
+
+        // 4. Bradesco
+        if (pkgLower.equals("com.bradesco") || pkgLower.startsWith("com.bradesco.") ||
+            pkgLower.equals("me.next.app")) {
+            return "Bradesco";
+        }
+
+        // 5. Santander
+        if (pkgLower.equals("com.santander.app") || pkgLower.startsWith("com.santander.")) {
+            return "Santander";
+        }
+
+        // 6. Banco Inter
+        if (pkgLower.equals("br.com.intermedium") || pkgLower.startsWith("br.com.intermedium.")) {
+            return "Inter";
+        }
+
+        // 7. Itaú / Iti
+        if (pkgLower.equals("com.itau") || pkgLower.startsWith("com.itau.") ||
+            pkgLower.equals("com.iti.iti") || pkgLower.startsWith("com.iti.")) {
+            return "Itaú";
+        }
+
+        // 8. C6 Bank
+        if (pkgLower.equals("com.c6bank.app") || pkgLower.startsWith("com.c6bank.")) {
+            return "C6 Bank";
+        }
+
+        // 9. PicPay
+        if (pkgLower.equals("com.picpay") || pkgLower.startsWith("com.picpay.")) {
+            return "PicPay";
+        }
+
+        // 10. Mercado Pago
+        if (pkgLower.equals("com.mercadopago.wallet") || pkgLower.startsWith("com.mercadopago.")) {
+            return "Mercado Pago";
+        }
+
+        // 11. PagBank / PagSeguro
+        if (pkgLower.equals("br.com.uol.ps") || pkgLower.startsWith("br.com.uol.ps.")) {
+            return "PagBank";
+        }
+
+        // 12. BTG Pactual
+        if (pkgLower.startsWith("com.btg.pactual.") || pkgLower.startsWith("com.btg.investimentos")) {
+            return "BTG Pactual";
+        }
+
+        // 13. Neon
+        if (pkgLower.equals("br.com.neon") || pkgLower.startsWith("br.com.neon.")) {
+            return "Neon";
+        }
+
+        // 14. Sicoob
+        if (pkgLower.equals("br.com.sicoob.netbr") || pkgLower.startsWith("br.com.sicoob.")) {
+            return "Sicoob";
+        }
+
+        // 15. Sicredi
+        if (pkgLower.equals("br.com.sicredi.mobile") || pkgLower.startsWith("br.com.sicredi.")) {
+            return "Sicredi";
+        }
+
+        return null;
+    }
+
+    /**
+     * Validação estrita para determinar se o conteúdo da notificação refere-se a uma
+     * transação financeira concluída (ex: Pix, compra no cartão, transferência, boleto pago).
+     * Rejeita sugestões de empréstimos, aumentos de limites, faturas fechadas, tokens e marketing.
+     */
+    public static boolean isStrictTransactionNotification(String title, String text) {
+        String combined = ((title != null ? title : "") + " " + (text != null ? text : "")).trim();
+        if (combined.isEmpty()) return false;
+
+        // A. Se corresponder a qualquer termo de exclusão (marketing, empréstimo, limite, senha, etc.), rejeita
+        if (EXCLUSION_PATTERN.matcher(combined).find()) {
+            return false;
+        }
+
+        // B. Deve obrigatoriamente conter um valor monetário válido
+        if (!MONEY_PATTERN.matcher(combined).find()) {
+            return false;
+        }
+
+        // C. Deve obrigatoriamente conter um indicador de transação financeira real
+        if (!TRANSACTION_ACTION_PATTERN.matcher(combined).find()) {
+            return false;
+        }
+
+        return true;
+    }
 
     @Override
     public void onListenerConnected() {
@@ -86,6 +278,13 @@ public class BankNotificationListener extends NotificationListenerService {
         if (packageName == null || packageName.equals(getPackageName())) return;
 
         String pkgLower = packageName.toLowerCase();
+
+        // 1. FILTRO ESTRITO DE BANCO: Apenas apps oficiais de bancos e instituições financeiras
+        String matchedBank = identifyBankByPackage(pkgLower);
+        if (matchedBank == null) {
+            // Rejeita qualquer outro aplicativo (ex: WhatsApp, Telegram, redes sociais, SMS, navegadores, etc.)
+            return;
+        }
 
         try {
             Notification notification = sbn.getNotification();
@@ -141,41 +340,14 @@ public class BankNotificationListener extends NotificationListenerService {
 
             if (text.isEmpty()) return;
 
-            String combinedLower = (title + " " + text + " " + pkgLower).toLowerCase();
-
-            // Identificação robusta do banco (por pacote ou palavras-chave)
-            String matchedBank = null;
-            if (pkgLower.contains("nu.production") || pkgLower.contains("nubank") || combinedLower.contains("nubank")) {
-                matchedBank = "Nubank";
-            } else if (pkgLower.contains("bb.android") || pkgLower.contains("bancodobrasil") || combinedLower.contains("bancodobrasil") || combinedLower.contains("banco do brasil")) {
-                matchedBank = "BB";
-            } else if (pkgLower.contains("caixa") || combinedLower.contains("caixa")) {
-                matchedBank = "Caixa";
-            } else if (pkgLower.contains("bradesco") || combinedLower.contains("bradesco")) {
-                matchedBank = "Bradesco";
-            } else if (pkgLower.contains("santander") || combinedLower.contains("santander")) {
-                matchedBank = "Santander";
-            } else if (pkgLower.contains("inter") || combinedLower.contains("inter")) {
-                matchedBank = "Inter";
-            } else if (pkgLower.contains("itau") || combinedLower.contains("itau") || combinedLower.contains("itaú")) {
-                matchedBank = "Nubank";
-            } else if (pkgLower.contains("picpay") || combinedLower.contains("picpay")) {
-                matchedBank = "Nubank";
-            } else if (pkgLower.contains("c6bank") || combinedLower.contains("c6")) {
-                matchedBank = "Nubank";
-            } else if (pkgLower.contains("mercadopago") || combinedLower.contains("mercado pago")) {
-                matchedBank = "Nubank";
-            } else if (pkgLower.contains("pagbank") || pkgLower.contains("pagseguro") || combinedLower.contains("pagbank") || combinedLower.contains("pagseguro")) {
-                matchedBank = "Nubank";
-            } else if (combinedLower.contains("r$") || combinedLower.contains("r $") || combinedLower.contains("pix") || combinedLower.contains("transferência") || combinedLower.contains("transferencia") || combinedLower.contains("compra") || combinedLower.contains("pagamento")) {
-                matchedBank = "Nubank"; // default para notificação bancária detectada
+            // 2. FILTRO ESTRITO DE TRANSAÇÃO: Apenas transações financeiras reais concluídas
+            // Rejeita sugestões de empréstimo, aumentos de limite, faturas fechadas, tokens e marketing
+            if (!isStrictTransactionNotification(title, text)) {
+                Log.d(TAG, "Notificação bancária descartada pelo filtro estrito de transação [" + matchedBank + "]: " + title + " | " + text);
+                return;
             }
 
-            if (matchedBank == null) {
-                return; // Notificação de app não bancário ignorada
-            }
-
-            Log.d(TAG, "Notificação bancária identificada [" + matchedBank + "]: " + title + " | " + text);
+            Log.d(TAG, "Transação bancária identificada com sucesso [" + matchedBank + "]: " + title + " | " + text);
 
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
             SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());

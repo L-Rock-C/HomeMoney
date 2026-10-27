@@ -23,6 +23,7 @@ import {
   BankNotification,
   dismissNotification,
   markNotificationReconciled,
+  parseBRLAmount,
 } from '../lib/bankNotificationService';
 import { createTransaction } from '../lib/api';
 import { TextInput, CurrencyInput, Checkbox, SelectDropdown } from './ui/FormControls';
@@ -135,7 +136,12 @@ export function ReconciliationQueueModal({
           (bankLower === 'caixa' && accLower.includes('caixa')) ||
           (bankLower === 'bradesco' && accLower.includes('bradesco')) ||
           (bankLower === 'santander' && accLower.includes('santander')) ||
-          (bankLower === 'inter' && accLower.includes('inter'))
+          (bankLower === 'inter' && accLower.includes('inter')) ||
+          (bankLower === 'itaú' && (accLower.includes('itau') || accLower.includes('itaú') || accLower.includes('iti'))) ||
+          (bankLower === 'c6 bank' && (accLower.includes('c6') || accLower.includes('c6bank'))) ||
+          (bankLower === 'picpay' && accLower.includes('picpay')) ||
+          (bankLower === 'mercado pago' && (accLower.includes('mercado') || accLower.includes('mp'))) ||
+          (bankLower === 'pagbank' && (accLower.includes('pagbank') || accLower.includes('pagseguro')))
         );
       });
       setAccountId(matchedAccount ? matchedAccount.id : accounts[0]?.id || '');
@@ -185,7 +191,7 @@ export function ReconciliationQueueModal({
       setError('Por favor, informe a descrição.');
       return;
     }
-    const cleanAmount = parseFloat(amount.replace(/\./g, '').replace(',', '.')) || 0;
+    const cleanAmount = parseBRLAmount(amount);
     if (cleanAmount <= 0) {
       setError('Informe um valor válido.');
       return;

@@ -19,7 +19,12 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { simulateTransferNotification } from '../lib/api';
-import { processIncomingAndroidNotificationItems } from '../lib/bankNotificationService';
+import {
+  processIncomingAndroidNotificationItems,
+  getPendingQueue,
+  SupportedBank,
+  parseBRLAmount,
+} from '../lib/bankNotificationService';
 
 interface DevSimulatorViewProps {
   currentUser: any;
@@ -49,7 +54,7 @@ export function DevSimulatorView({
   ]);
 
   // Bank simulation states
-  const [bankType, setBankType] = useState<'Nubank' | 'BB' | 'Caixa' | 'Inter'>('Nubank');
+  const [bankType, setBankType] = useState<SupportedBank>('Nubank');
   const [bankAmount, setBankAmount] = useState('85,50');
   const [bankSender, setBankSender] = useState('Letícia Lima');
   const [bankMethod, setBankMethod] = useState<'Pix' | 'Crédito'>('Pix');
@@ -73,11 +78,24 @@ export function DevSimulatorView({
   };
 
   // 1. Simular Notificação Bancária Local / Android
-  const handleSimulateBankNotification = (preset?: 'nubank_pix' | 'nubank_cartao' | 'bb_pix') => {
+  const handleSimulateBankNotification = (
+    preset?:
+      | 'nubank_pix'
+      | 'nubank_cartao'
+      | 'bb_pix'
+      | 'itau_pix'
+      | 'inter_pix'
+      | 'blocked_loan'
+      | 'blocked_whatsapp'
+      | 'blocked_invoice'
+      | 'blocked_limit'
+  ) => {
     try {
       let title = '';
       let text = '';
-      let bank: any = bankType;
+      let bank: SupportedBank = bankType;
+      let isBlockedScenario = false;
+      let blockedReason = '';
 
       if (preset === 'nubank_pix') {
         bank = 'Nubank';
@@ -90,7 +108,39 @@ export function DevSimulatorView({
       } else if (preset === 'bb_pix') {
         bank = 'BB';
         title = 'BB Notificações';
-        text = 'BB: Você recebeu um Pix de R$ 120,00 de Allison Araújo no dia 24/10.';
+        text = 'BB: Pix recebido no valor de R$ 120,00 de Allison Araújo no dia 24/10.';
+      } else if (preset === 'itau_pix') {
+        bank = 'Itaú';
+        title = 'Itaú: Pix Recebido';
+        text = 'Você recebeu um Pix de R$ 250,00 de Carlos Silva.';
+      } else if (preset === 'inter_pix') {
+        bank = 'Inter';
+        title = 'Banco Inter';
+        text = 'Inter: Voce recebeu um Pix de R$ 180,00 de Paula Oliveira.';
+      } else if (preset === 'blocked_loan') {
+        bank = 'Nubank';
+        title = 'Nubank • Empréstimo';
+        text = 'Lucas, você tem um empréstimo de R$ 15.000,00 pré-aprovado! Simule agora no app.';
+        isBlockedScenario = true;
+        blockedReason = 'Sugestão de empréstimo não é transação financeira';
+      } else if (preset === 'blocked_whatsapp') {
+        bank = 'Nubank';
+        title = 'WhatsApp (Allison Araújo)';
+        text = 'E aí cara, te transferi R$ 50 pelo Pix ontem, confere aí.';
+        isBlockedScenario = true;
+        blockedReason = 'Notificação oriunda do WhatsApp (não é aplicativo bancário)';
+      } else if (preset === 'blocked_invoice') {
+        bank = 'Nubank';
+        title = 'Nubank • Cartão';
+        text = 'Sua fatura do cartão Nubank fechou no valor de R$ 850,20. Pague até o vencimento.';
+        isBlockedScenario = true;
+        blockedReason = 'Fechamento de fatura não é transação financeira nova';
+      } else if (preset === 'blocked_limit') {
+        bank = 'Nubank';
+        title = 'Nubank • Limite';
+        text = 'Parabéns! Aumentamos o seu limite de crédito para R$ 4.500,00.';
+        isBlockedScenario = true;
+        blockedReason = 'Ajuste de limite não é transação financeira';
       } else {
         const valStr = bankAmount.replace(',', '.');
         if (isBankIncoming) {
@@ -102,6 +152,14 @@ export function DevSimulatorView({
         }
       }
 
+      if (preset === 'blocked_whatsapp') {
+        addLog(
+          `🚫 [Filtro de Pacote Ativo] Pacote "com.whatsapp" bloqueado com sucesso: mensagens do WhatsApp com valores não geram transações.`,
+          'error'
+        );
+        return;
+      }
+
       const item = {
         id: `sim_bank_${Date.now()}`,
         bank,
@@ -111,10 +169,20 @@ export function DevSimulatorView({
         time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       };
 
+      const queueBefore = getPendingQueue().length;
       processIncomingAndroidNotificationItems([item]);
+      const queueAfter = getPendingQueue().length;
+
       window.dispatchEvent(new CustomEvent('homemoney_queue_updated'));
 
-      addLog(`Notificação bancária simulada: "${text}"`, 'success');
+      if (isBlockedScenario || queueAfter === queueBefore) {
+        addLog(
+          `🚫 [Filtro Estrito Ativo] Notificação rejeitada com sucesso (${blockedReason || 'não é transação'}): "${text}"`,
+          'error'
+        );
+      } else {
+        addLog(`✅ Notificação bancária válida aceita na fila de conciliação: "${text}"`, 'success');
+      }
       onRefreshAllData();
     } catch (e: any) {
       addLog(`Erro ao simular notificação bancária: ${e.message}`, 'error');
@@ -125,7 +193,7 @@ export function DevSimulatorView({
   const handleSimulateTransfer = async (direction: 'INCOMING' | 'OUTGOING') => {
     try {
       setTransferLoading(true);
-      const numAmount = parseFloat(transferAmount.replace(/\./g, '').replace(',', '.')) || 50;
+      const numAmount = parseBRLAmount(transferAmount) || 50;
 
       const res = await simulateTransferNotification({
         direction,
@@ -171,7 +239,7 @@ export function DevSimulatorView({
         if (typeof (window as any).AndroidNotificationBridge.postTransferNotification === 'function') {
           (window as any).AndroidNotificationBridge.postTransferNotification(
             'Letícia Lima (Simulação)',
-            formatBRL(parseFloat(transferAmount.replace(',', '.')) || 65),
+            formatBRL(parseBRLAmount(transferAmount) || 65),
             transferDesc,
             `test_${Date.now()}`
           );
@@ -313,32 +381,84 @@ export function DevSimulatorView({
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold text-slate-500">Atalhos rápidos:</span>
-              <button
-                type="button"
-                onClick={() => handleSimulateBankNotification('nubank_pix')}
-                className="px-2.5 py-1 rounded-lg bg-violet-500/15 hover:bg-violet-500/25 text-violet-600 dark:text-violet-400 border border-violet-500/30 text-[11px] font-bold transition"
-              >
-                Nubank Pix (R$ 50 de Letícia)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSimulateBankNotification('nubank_cartao')}
-                className="px-2.5 py-1 rounded-lg bg-violet-500/15 hover:bg-violet-500/25 text-violet-600 dark:text-violet-400 border border-violet-500/30 text-[11px] font-bold transition"
-              >
-                Cartão (R$ 89,90 Restaurante)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSimulateBankNotification('bb_pix')}
-                className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[11px] font-bold transition"
-              >
-                BB Pix (R$ 120,00)
-              </button>
+            <div>
+              <span className="text-xs font-semibold text-slate-500 block mb-1.5">
+                Transações Válidas (Entram na Fila):
+              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleSimulateBankNotification('nubank_pix')}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[11px] font-bold transition cursor-pointer"
+                >
+                  Nubank Pix (R$ 50)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSimulateBankNotification('nubank_cartao')}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[11px] font-bold transition cursor-pointer"
+                >
+                  Cartão (R$ 89,90)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSimulateBankNotification('bb_pix')}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[11px] font-bold transition cursor-pointer"
+                >
+                  BB Pix (R$ 120,00)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSimulateBankNotification('itau_pix')}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[11px] font-bold transition cursor-pointer"
+                >
+                  Itaú Pix (R$ 250,00)
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div>
+              <span className="text-xs font-semibold text-rose-500 dark:text-rose-400 block mb-1.5 flex items-center gap-1">
+                <ShieldAlert className="w-3.5 h-3.5" />
+                Testar Filtros de Proteção (Devem ser Bloqueados):
+              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleSimulateBankNotification('blocked_loan')}
+                  className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-[11px] font-bold transition cursor-pointer"
+                  title="Simula sugestão de empréstimo do banco (R$ 15.000)"
+                >
+                  🚫 Empréstimo Banco
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSimulateBankNotification('blocked_whatsapp')}
+                  className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-[11px] font-bold transition cursor-pointer"
+                  title="Simula mensagem do WhatsApp com valor em R$"
+                >
+                  🚫 WhatsApp com R$
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSimulateBankNotification('blocked_invoice')}
+                  className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-[11px] font-bold transition cursor-pointer"
+                  title="Simula aviso de fechamento de fatura"
+                >
+                  🚫 Fatura Fechada
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSimulateBankNotification('blocked_limit')}
+                  className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/25 text-[11px] font-bold transition cursor-pointer"
+                  title="Simula aviso de aumento de limite"
+                >
+                  🚫 Aumento de Limite
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Banco
@@ -349,9 +469,20 @@ export function DevSimulatorView({
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-xs font-semibold"
                 >
                   <option value="Nubank">Nubank</option>
-                  <option value="BB">Banco do Brasil</option>
-                  <option value="Caixa">Caixa</option>
+                  <option value="BB">Banco do Brasil (BB)</option>
+                  <option value="Caixa">Caixa Econômica</option>
+                  <option value="Bradesco">Bradesco</option>
+                  <option value="Santander">Santander</option>
                   <option value="Inter">Banco Inter</option>
+                  <option value="Itaú">Itaú / Iti</option>
+                  <option value="C6 Bank">C6 Bank</option>
+                  <option value="PicPay">PicPay</option>
+                  <option value="Mercado Pago">Mercado Pago</option>
+                  <option value="PagBank">PagBank</option>
+                  <option value="BTG Pactual">BTG Pactual</option>
+                  <option value="Neon">Neon</option>
+                  <option value="Sicoob">Sicoob</option>
+                  <option value="Sicredi">Sicredi</option>
                 </select>
               </div>
 
