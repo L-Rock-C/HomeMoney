@@ -494,21 +494,34 @@ export function ReconciliationQueueModal({
               </div>
             </div>
 
-            {/* Status e Observação */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center pt-1">
+            {/* Datas da Operação e Vencimento */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <TextInput
+                label="Data da Operação"
+                type="date"
+                required
+                value={purchaseDate}
+                onChange={(e) => setPurchaseDate(e.target.value)}
+                leftIcon={<Calendar className="w-4 h-4 text-slate-400" />}
+              />
+
+              <TextInput
+                label="Data de Vencimento"
+                type="date"
+                required
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                leftIcon={<Calendar className="w-4 h-4 text-amber-500" />}
+              />
+            </div>
+
+            {/* Status Pago */}
+            <div className="pt-1">
               <Checkbox
                 label="Transação já liquidada/paga"
                 description="Debita ou credita imediatamente no saldo da carteira"
                 checked={paid}
                 onChange={(val) => setPaid(val)}
-              />
-
-              <TextInput
-                label="Data da Operação"
-                type="date"
-                value={purchaseDate}
-                onChange={(e) => setPurchaseDate(e.target.value)}
-                leftIcon={<Calendar className="w-4 h-4 text-slate-400" />}
               />
             </div>
 
