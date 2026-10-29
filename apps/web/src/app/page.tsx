@@ -1471,26 +1471,16 @@ export default function HomePage() {
             <>
 
               {/* Barra 1: Filtro de Data Compacto */}
-              <div className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between gap-2 flex-wrap">
+              <div className="p-2 sm:p-2.5 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
                 {filterMode === 'MONTH' ? (
                   <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                    {/* Botão Mês Anterior */}
-                    <button
-                      type="button"
-                      onClick={handlePrevMonth}
-                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer shrink-0 shadow-xs active:scale-95"
-                      title="Mês anterior"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-
-                    {/* Caixa de Seleção do Mês */}
-                    <div className="w-[170px] sm:w-[195px]">
+                    {/* Caixa de Seleção do Mês (Sem botões de setas) */}
+                    <div className="flex-1 min-w-0 sm:w-[210px] sm:flex-initial">
                       <SelectDropdown
                         value={selectedMonth}
                         onChange={(e) => handleMonthSelect(e.target.value)}
                         leftIcon={<Calendar className="w-4 h-4 text-emerald-500" />}
-                        className="py-1.5 px-3 text-xs sm:text-sm font-semibold"
+                        className="py-1.5 px-3 text-xs sm:text-sm font-semibold w-full"
                         placeholder="Selecione o mês"
                       >
                         {Array.from(new Set([...availableMonths, selectedMonth])).sort().map((m) => (
@@ -1501,22 +1491,12 @@ export default function HomePage() {
                       </SelectDropdown>
                     </div>
 
-                    {/* Botão Próximo Mês */}
-                    <button
-                      type="button"
-                      onClick={handleNextMonth}
-                      className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer shrink-0 shadow-xs active:scale-95"
-                      title="Próximo mês"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-
                     {/* Atalho "Hoje" */}
                     {selectedMonth !== getCurrentMonthKey() && (
                       <button
                         type="button"
                         onClick={() => handleMonthSelect(getCurrentMonthKey())}
-                        className="hidden sm:inline-flex px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition cursor-pointer shrink-0"
+                        className="hidden md:inline-flex px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition cursor-pointer shrink-0"
                         title="Voltar para o mês atual"
                       >
                         Hoje ({formatMonthYearLabel(getCurrentMonthKey())})
@@ -1524,38 +1504,40 @@ export default function HomePage() {
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">De:</span>
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-1 min-w-[105px]">
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">De:</span>
                       <input
                         type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full px-2 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                       />
                     </div>
 
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Até:</span>
+                    <div className="flex items-center gap-1.5 flex-1 min-w-[105px]">
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">Até:</span>
                       <input
                         type="date"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+                        className="w-full px-2 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                       />
                     </div>
 
                     <button
+                      type="button"
                       onClick={handleApplyDateRange}
-                      className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-xs transition cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-white dark:text-slate-950 shadow-xs transition cursor-pointer shrink-0"
                     >
                       Aplicar
                     </button>
 
                     {(startDate || endDate) && (
                       <button
+                        type="button"
                         onClick={handleClearDateFilter}
-                        className="px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
+                        className="px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer shrink-0"
                       >
                         Limpar
                       </button>
@@ -1566,6 +1548,7 @@ export default function HomePage() {
                 {/* Alternador de Modo: Por Mês vs De/Até */}
                 <div className="flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
                   <button
+                    type="button"
                     onClick={() => setFilterMode('MONTH')}
                     className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
                       filterMode === 'MONTH'
@@ -1576,6 +1559,7 @@ export default function HomePage() {
                     Mês
                   </button>
                   <button
+                    type="button"
                     onClick={() => setFilterMode('RANGE')}
                     className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
                       filterMode === 'RANGE'
