@@ -106,9 +106,37 @@ export interface Transaction {
   totalInstallments?: number | null;
   installmentGroupId?: string | null;
 
+  // Origem Recorrente / Assinatura
+  recurringId?: string | null;
+
   createdAt: string;
   updatedAt: string;
 }
+
+export interface RecurringTransaction {
+  id: string;
+  description: string;
+  amount: number;
+  type: TransactionType; // INCOME ou EXPENSE
+  frequency: 'MONTHLY' | 'YEARLY' | 'WEEKLY';
+  recurrenceDay: number; // 1 a 31
+  paymentMethod: string;
+  status: 'ACTIVE' | 'PAUSED' | 'CANCELED';
+  notes?: string | null;
+  autoGenerate: boolean;
+  startDate?: string | null;
+  endDate?: string | null;
+
+  accountId: string;
+  account?: Account;
+
+  categoryId: string;
+  category?: Category;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
 
 export interface MonthlyBalance {
   month: string; // YYYY-MM
@@ -200,6 +228,28 @@ export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 
 export const updateTransactionSchema = createTransactionSchema.partial();
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
+
+export const createRecurringTransactionSchema = z.object({
+  description: z.string().min(1, 'Descrição é obrigatória'),
+  amount: z.number().positive('O valor deve ser maior que zero'),
+  type: z.nativeEnum(TransactionType),
+  frequency: z.enum(['MONTHLY', 'YEARLY', 'WEEKLY']).default('MONTHLY'),
+  recurrenceDay: z.number().int().min(1).max(31).default(1),
+  paymentMethod: z.string().default('Crédito'),
+  notes: z.string().optional().nullable(),
+  autoGenerate: z.boolean().default(true),
+  accountId: z.string().min(1, 'Carteira/Conta é obrigatória'),
+  categoryId: z.string().min(1, 'Categoria é obrigatória'),
+  startDate: z.string().optional().nullable(),
+  endDate: z.string().optional().nullable(),
+});
+export type CreateRecurringTransactionInput = z.infer<typeof createRecurringTransactionSchema>;
+
+export const updateRecurringTransactionSchema = createRecurringTransactionSchema.partial().extend({
+  status: z.enum(['ACTIVE', 'PAUSED', 'CANCELED']).optional(),
+});
+export type UpdateRecurringTransactionInput = z.infer<typeof updateRecurringTransactionSchema>;
+
 
 export const settleDebtSchema = z.object({
   personId: z.string().min(1, 'Pessoa é obrigatória'),

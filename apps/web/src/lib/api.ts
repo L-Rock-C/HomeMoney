@@ -615,4 +615,96 @@ export async function executeBulkDelete(filters: BulkDeleteFilters) {
   return res.json() as Promise<{ deletedCount: number }>;
 }
 
+// ==========================================
+// Recurring Transactions (Assinaturas & Fixos)
+// ==========================================
+
+export interface RecurringMetrics {
+  totalFixedIncomes: number;
+  totalFixedExpenses: number;
+  totalSubscriptions: number;
+  netFreeBalance: number;
+  activeCount: number;
+  pausedCount: number;
+  totalCount: number;
+}
+
+export interface RecurringResponse {
+  items: any[];
+  metrics: RecurringMetrics;
+}
+
+export async function fetchRecurringTransactions(status?: string): Promise<RecurringResponse> {
+  const query = status && status !== 'ALL' ? `?status=${status}` : '';
+  const res = await fetch(`${API_BASE}/recurring${query}`, {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Falha ao carregar assinaturas e fixos');
+  return res.json();
+}
+
+export async function createRecurringTransaction(data: any) {
+  const res = await fetch(`${API_BASE}/recurring`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Falha ao criar recorrência');
+  }
+  return res.json();
+}
+
+export async function updateRecurringTransaction(id: string, data: any) {
+  const res = await fetch(`${API_BASE}/recurring/${id}`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Falha ao atualizar recorrência');
+  }
+  return res.json();
+}
+
+export async function toggleRecurringTransaction(id: string) {
+  const res = await fetch(`${API_BASE}/recurring/${id}/toggle`, {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Falha ao alterar status da recorrência');
+  return res.json();
+}
+
+export async function deleteRecurringTransaction(id: string) {
+  const res = await fetch(`${API_BASE}/recurring/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) throw new Error('Falha ao excluir recorrência');
+  return res.json();
+}
+
+export async function generateRecurringForMonth(month: string) {
+  const res = await fetch(`${API_BASE}/recurring/generate-month`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ month }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Falha ao sincronizar recorrências no mês');
+  }
+  return res.json() as Promise<{
+    message: string;
+    createdCount: number;
+    skippedCount: number;
+    transactions: any[];
+  }>;
+}
+
+
 

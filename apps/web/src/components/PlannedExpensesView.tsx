@@ -24,6 +24,7 @@ import {
   ShieldAlert,
   Coins,
   Check,
+  Repeat,
 } from 'lucide-react';
 
 interface PlannedExpensesViewProps {
@@ -39,6 +40,7 @@ interface PlannedExpensesViewProps {
   categories: any[];
   people: any[];
   onSelectMonth?: (month: string) => void;
+  onOpenRecurring?: () => void;
 }
 
 export function PlannedExpensesView({
@@ -53,6 +55,7 @@ export function PlannedExpensesView({
   accounts,
   categories,
   people,
+  onOpenRecurring,
 }: PlannedExpensesViewProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'OVERDUE' | 'TODAY' | 'UPCOMING'>('ALL');
@@ -262,6 +265,31 @@ export function PlannedExpensesView({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
+      {/* Banner de Acesso Rápido para Assinaturas & Fixos */}
+      {onOpenRecurring && (
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-purple-500/10 via-indigo-500/5 to-transparent border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+              <Repeat className="w-5 h-5 animate-spin-slow" />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                Assinaturas & Lançamentos Fixos Recorrentes
+              </h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Acompanhe salário, streaming e contas contínuas com projeção automática de Saldo Livre.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenRecurring}
+            className="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition shadow-xs whitespace-nowrap cursor-pointer self-start sm:self-center"
+          >
+            Gerenciar Assinaturas
+          </button>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 2. KPI Cards de Compromissos Futuros */}

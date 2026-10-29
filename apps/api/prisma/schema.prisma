@@ -28,6 +28,7 @@ model User {
 
   sentTransferNotifications     TransferNotification[] @relation("SentTransferNotifications")
   receivedTransferNotifications TransferNotification[] @relation("ReceivedTransferNotifications")
+  recurringTransactions         RecurringTransaction[] @relation("UserRecurringTransactions")
 }
 
 model Account {
@@ -43,7 +44,8 @@ model Account {
   userId         String?
   user           User?         @relation("UserAccounts", fields: [userId], references: [id], onDelete: Cascade)
 
-  transactions   Transaction[]
+  transactions          Transaction[]
+  recurringTransactions RecurringTransaction[]
 }
 
 model Category {
@@ -59,7 +61,8 @@ model Category {
   userId       String?
   user         User?         @relation("UserCategories", fields: [userId], references: [id], onDelete: Cascade)
 
-  transactions Transaction[]
+  transactions          Transaction[]
+  recurringTransactions RecurringTransaction[]
 }
 
 model ContactInvite {
@@ -136,8 +139,43 @@ model Transaction {
   personId            String?
   person              Person?   @relation(fields: [personId], references: [id], onDelete: SetNull)
 
+  // Link to Recurring origin
+  recurringId         String?
+  recurring           RecurringTransaction? @relation("RecurringTransactions", fields: [recurringId], references: [id], onDelete: SetNull)
+
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+}
+
+model RecurringTransaction {
+  id             String        @id @default(uuid())
+  description    String
+  amount         Float
+  type           String        // INCOME, EXPENSE
+  frequency      String        @default("MONTHLY") // MONTHLY, YEARLY, WEEKLY
+  recurrenceDay  Int           @default(1) // 1 to 31
+  paymentMethod  String        @default("CREDIT") // CREDIT, DEBIT, PIX, PIX_CREDIT, CASH, OTHER
+  status         String        @default("ACTIVE") // ACTIVE, PAUSED, CANCELED
+  notes          String?
+  autoGenerate   Boolean       @default(true)
+  startDate      DateTime?     @default(now())
+  endDate        DateTime?
+
+  // Owner user
+  userId         String?
+  user           User?         @relation("UserRecurringTransactions", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  accountId      String
+  account        Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  categoryId     String
+  category       Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  transactions   Transaction[] @relation("RecurringTransactions")
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
 
 model TransferNotification {
@@ -160,3 +198,4 @@ model TransferNotification {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+

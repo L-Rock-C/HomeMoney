@@ -43,6 +43,7 @@ import {
   ArrowRight,
   FlaskConical,
   CalendarClock,
+  Repeat,
   SlidersHorizontal,
 } from 'lucide-react';
 import {
@@ -77,6 +78,8 @@ import { DevSimulatorView } from '../components/DevSimulatorView';
 import { TransactionDetailModal } from '../components/TransactionDetailModal';
 import { PeopleTableView } from '../components/PeopleTableView';
 import { PlannedExpensesView } from '../components/PlannedExpensesView';
+import { RecurringTransactionsView } from '../components/RecurringTransactionsView';
+import { RecurringModal } from '../components/RecurringModal';
 import { HomeMoneyLogo } from '../components/HomeMoneyLogo';
 import { CategoryDonutChart, MonthlyBarChart } from '../components/FinanceCharts';
 import { SelectDropdown } from '../components/ui/FormControls';
@@ -198,7 +201,7 @@ export default function HomePage() {
 
   // App data states
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'TRANSACTIONS' | 'PLANNED_EXPENSES' | 'BALANCE' | 'PEOPLE' | 'WALLETS' | 'PROFILE' | 'SUGGESTIONS' | 'MANAGER' | 'DEV_SIMULATOR'>('DASHBOARD');
+  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'TRANSACTIONS' | 'PLANNED_EXPENSES' | 'RECURRING' | 'BALANCE' | 'PEOPLE' | 'WALLETS' | 'PROFILE' | 'SUGGESTIONS' | 'MANAGER' | 'DEV_SIMULATOR'>('DASHBOARD');
   const [showTransactionKPIs, setShowTransactionKPIs] = useState(false);
   const [showWalletKPIs, setShowWalletKPIs] = useState(false);
   const [selectedDetailTransaction, setSelectedDetailTransaction] = useState<any | null>(null);
@@ -261,6 +264,8 @@ export default function HomePage() {
   const [managerSection, setManagerSection] = useState<'CATEGORIES' | 'PAYMENTS' | 'THEMES'>('CATEGORIES');
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [walletToEdit, setWalletToEdit] = useState<any | null>(null);
+  const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
+  const [recurringToEdit, setRecurringToEdit] = useState<any | null>(null);
 
   // Fila de Conciliação e Histórico de Notificações Bancárias
   const [pendingQueue, setPendingQueue] = useState<BankNotification[]>([]);
@@ -951,6 +956,27 @@ export default function HomePage() {
             )}
           </button>
 
+          {/* Assinaturas & Fixos Recorrentes */}
+          <button
+            onClick={() => {
+              setActiveTab('RECURRING');
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full flex items-center ${
+              sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-3'
+            } py-2.5 rounded-xl text-sm font-medium transition cursor-pointer ${
+              activeTab === 'RECURRING'
+                ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            }`}
+            title="Assinaturas & Lançamentos Fixos (Salário, Streaming, Contas)"
+          >
+            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+              <Repeat className="w-5 h-5 min-w-5 shrink-0 text-purple-500" />
+              {!sidebarCollapsed && <span>Assinaturas & Fixos</span>}
+            </div>
+          </button>
+
           {/* Carteiras & Poupanças no Nav com Formato Toggle Accordion */}
           <div>
             <div
@@ -1291,6 +1317,7 @@ export default function HomePage() {
                 {activeTab === 'DASHBOARD' && 'Visão Geral'}
                 {activeTab === 'TRANSACTIONS' && 'Extrato de Transações'}
                 {activeTab === 'PLANNED_EXPENSES' && 'Gastos Previstos (Compromissos do Mês)'}
+                {activeTab === 'RECURRING' && 'Assinaturas & Lançamentos Fixos'}
                 {activeTab === 'BALANCE' && 'Balanço Consolidado'}
                 {activeTab === 'PEOPLE' && 'Contatos & Acertos'}
                 {activeTab === 'WALLETS' && 'Carteiras & Poupanças'}
@@ -2227,6 +2254,30 @@ export default function HomePage() {
               categories={categories}
               people={people}
               onSelectMonth={handleMonthSelect}
+              onOpenRecurring={() => setActiveTab('RECURRING')}
+            />
+          )}
+
+          {/* ========================================================================= */}
+          {/* TAB: Assinaturas & Fixos Recorrentes */}
+          {/* ========================================================================= */}
+          {activeTab === 'RECURRING' && (
+            <RecurringTransactionsView
+              selectedMonth={selectedMonth}
+              formatBRL={formatBRL}
+              accounts={accounts}
+              categories={categories}
+              onOpenCreateModal={() => {
+                setRecurringToEdit(null);
+                setIsRecurringModalOpen(true);
+              }}
+              onOpenEditModal={(item) => {
+                setRecurringToEdit(item);
+                setIsRecurringModalOpen(true);
+              }}
+              onSyncCompleted={() => {
+                loadInitialData(false, selectedMonth);
+              }}
             />
           )}
 
@@ -2668,6 +2719,21 @@ export default function HomePage() {
         pendingTransfers={pendingTransfers}
         accounts={accounts}
         formatBRL={formatBRL}
+      />
+
+      <RecurringModal
+        isOpen={isRecurringModalOpen}
+        onClose={() => {
+          setIsRecurringModalOpen(false);
+          setRecurringToEdit(null);
+        }}
+        onSuccess={() => {
+          loadInitialData(false, selectedMonth);
+        }}
+        accounts={accounts}
+        categories={categories}
+        paymentMethods={paymentMethods}
+        recurringToEdit={recurringToEdit}
       />
 
       {/* Modal de Detalhes da Transação (Mobile Compact View) */}
