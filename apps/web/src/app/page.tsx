@@ -1493,21 +1493,31 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Filtros de Período e Indicadores KPI: Apenas em Telas de Análise Financeira (DASHBOARD, TRANSACTIONS, PLANNED_EXPENSES, BALANCE) */}
-          {(activeTab === 'DASHBOARD' || activeTab === 'TRANSACTIONS' || activeTab === 'BALANCE' || activeTab === 'PLANNED_EXPENSES') && (
+          {/* Filtros de Período e Indicadores KPI: Em Telas de Análise Financeira (DASHBOARD, TRANSACTIONS, PLANNED_EXPENSES, BALANCE, RECURRING) */}
+          {(activeTab === 'DASHBOARD' || activeTab === 'TRANSACTIONS' || activeTab === 'BALANCE' || activeTab === 'PLANNED_EXPENSES' || activeTab === 'RECURRING') && (
             <>
 
               {/* Barra 1: Filtro de Data Compacto */}
               <div className="p-2 sm:p-2.5 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
                 {filterMode === 'MONTH' ? (
-                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                    {/* Caixa de Seleção do Mês (Sem botões de setas) */}
-                    <div className="flex-1 min-w-0 sm:w-[210px] sm:flex-initial">
+                  <div className="flex items-center gap-1 sm:gap-1.5 flex-1 min-w-0">
+                    {/* Botão Mês Anterior */}
+                    <button
+                      type="button"
+                      onClick={handlePrevMonth}
+                      className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer shrink-0 active:scale-95 shadow-xs"
+                      title="Mês anterior"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </button>
+
+                    {/* Caixa de Seleção do Mês */}
+                    <div className="flex-1 min-w-0 sm:w-[200px] sm:flex-initial">
                       <SelectDropdown
                         value={selectedMonth}
                         onChange={(e) => handleMonthSelect(e.target.value)}
-                        leftIcon={<Calendar className="w-4 h-4 text-emerald-500" />}
-                        className="py-1.5 px-3 text-xs sm:text-sm font-semibold w-full"
+                        leftIcon={<Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500" />}
+                        className="py-1 sm:py-1.5 px-2 sm:px-3 text-xs sm:text-sm font-semibold w-full"
                         placeholder="Selecione o mês"
                       >
                         {Array.from(new Set([...availableMonths, selectedMonth])).sort().map((m) => (
@@ -1517,6 +1527,16 @@ export default function HomePage() {
                         ))}
                       </SelectDropdown>
                     </div>
+
+                    {/* Botão Próximo Mês */}
+                    <button
+                      type="button"
+                      onClick={handleNextMonth}
+                      className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg sm:rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer shrink-0 active:scale-95 shadow-xs"
+                      title="Próximo mês"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </button>
 
                     {/* Atalho "Hoje" */}
                     {selectedMonth !== getCurrentMonthKey() && (
@@ -1573,11 +1593,11 @@ export default function HomePage() {
                 )}
 
                 {/* Alternador de Modo: Por Mês vs De/Até */}
-                <div className="flex items-center gap-1 p-0.5 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
+                <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
                   <button
                     type="button"
                     onClick={() => setFilterMode('MONTH')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                    className={`px-2 sm:px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
                       filterMode === 'MONTH'
                         ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
                         : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -1588,7 +1608,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setFilterMode('RANGE')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                    className={`px-2 sm:px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition cursor-pointer ${
                       filterMode === 'RANGE'
                         ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
                         : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -2267,6 +2287,7 @@ export default function HomePage() {
               formatBRL={formatBRL}
               accounts={accounts}
               categories={categories}
+              transactions={transactions}
               onOpenCreateModal={() => {
                 setRecurringToEdit(null);
                 setIsRecurringModalOpen(true);

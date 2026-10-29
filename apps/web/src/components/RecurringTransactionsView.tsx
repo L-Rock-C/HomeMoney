@@ -24,6 +24,8 @@ import {
   TrendingDown,
   Layers,
   Zap,
+  Clock,
+  Check,
 } from 'lucide-react';
 import {
   fetchRecurringTransactions,
@@ -33,11 +35,30 @@ import {
   RecurringMetrics,
 } from '../lib/api';
 
+const MONTH_NAMES_SHORT = [
+  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+  'jul', 'ago', 'set', 'out', 'nov', 'dez'
+];
+
+const formatMonthYearLabel = (monthKey: string) => {
+  if (!monthKey) return '';
+  const parts = monthKey.split('-');
+  if (parts.length === 2) {
+    const year = parts[0];
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    if (monthIdx >= 0 && monthIdx < 12) {
+      return `${MONTH_NAMES_SHORT[monthIdx]}/${year}`;
+    }
+  }
+  return monthKey;
+};
+
 interface RecurringTransactionsViewProps {
   selectedMonth: string;
   formatBRL: (val: number) => string;
   accounts: any[];
   categories: any[];
+  transactions?: any[];
   onOpenCreateModal: () => void;
   onOpenEditModal: (item: any) => void;
   onSyncCompleted?: () => void;
@@ -48,6 +69,7 @@ export function RecurringTransactionsView({
   formatBRL,
   accounts,
   categories,
+  transactions = [],
   onOpenCreateModal,
   onOpenEditModal,
   onSyncCompleted,
@@ -351,7 +373,7 @@ export function RecurringTransactionsView({
             title={`Gera lançamentos pendentes no mês selecionado (${selectedMonth})`}
           >
             <Repeat className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-            <span>{syncing ? 'Sincronizando...' : `Lançar em ${selectedMonth}`}</span>
+            <span>{syncing ? 'Sincronizando...' : `Lançar em ${formatMonthYearLabel(selectedMonth)}`}</span>
           </button>
 
           <button
@@ -410,6 +432,7 @@ export function RecurringTransactionsView({
                   <th className="py-3 px-4">Dia do Mês</th>
                   <th className="py-3 px-4">Descrição & Categoria</th>
                   <th className="py-3 px-4">Carteira & Pagamento</th>
+                  <th className="py-3 px-4 text-center">No Mês ({formatMonthYearLabel(selectedMonth)})</th>
                   <th className="py-3 px-4 text-right">Valor Mensal</th>
                   <th className="py-3 px-4 text-center">Status</th>
                   <th className="py-3 px-4 text-right">Ações</th>
@@ -487,6 +510,39 @@ export function RecurringTransactionsView({
                             {item.paymentMethod || 'Crédito'}
                           </span>
                         </div>
+                      </td>
+
+                      {/* Situação no Mês Selecionado */}
+                      <td className="py-3 px-4 text-center whitespace-nowrap">
+                        {(() => {
+                          const monthTx = transactions.find((t: any) => t.recurringId === item.id);
+                          if (monthTx) {
+                            if (monthTx.paid) {
+                              return (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                  <Check className="w-3 h-3 stroke-[2.5]" /> Liquidada
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                <Clock className="w-3 h-3" /> Lançada (Pendente)
+                              </span>
+                            );
+                          }
+                          if (item.status === 'ACTIVE') {
+                            return (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20">
+                                <Calendar className="w-3 h-3" /> Prevista
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400">
+                              Pausada
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* Valor Mensal */}

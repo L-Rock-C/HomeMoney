@@ -118,9 +118,23 @@ export function ReconciliationQueueModal({
       setAmount(currentItem.formattedAmount);
       setPurchaseDate(currentItem.date);
       setDueDate(currentItem.date);
-      setPaymentMethod(currentItem.paymentMethod || 'Pix');
-      setPaid(true);
-      setTotalInstallments('1');
+      const isCredit =
+        currentItem.type !== 'INCOME' &&
+        (currentItem.paymentMethod === 'Crédito' || /cr[eé]dito/i.test(currentItem.rawText));
+      setPaymentMethod(isCredit ? 'Crédito' : currentItem.paymentMethod || 'Pix');
+      setPaid(!isCredit);
+
+      // Tenta detectar parcelamento no texto da notificação (ex: "em 3x", "10x", "3 parcelas")
+      const raw = currentItem.rawText || '';
+      const parcelasMatch =
+        raw.match(/(?:em\s*|de\s*)(\d+)\s*(?:x|vezes|parcelas?)/i) ||
+        raw.match(/\b(\d+)\s*x\b/i);
+      if (parcelasMatch && parseInt(parcelasMatch[1], 10) > 1) {
+        setTotalInstallments(parcelasMatch[1]);
+      } else {
+        setTotalInstallments('1');
+      }
+
       setNotes(
         `Lançamento automático via Notificação ${currentItem.bank} (${currentItem.date} às ${currentItem.time})`
       );
@@ -232,6 +246,13 @@ export function ReconciliationQueueModal({
       setLoading(false);
     }
   };
+
+  const numAmount = parseBRLAmount(amount);
+  const installmentsNum = Math.max(1, parseInt(String(totalInstallments), 10) || 1);
+  const installmentPreview =
+    installmentsNum > 1 && numAmount > 0
+      ? (numAmount / installmentsNum).toFixed(2).replace('.', ',')
+      : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/65 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
@@ -515,14 +536,31 @@ export function ReconciliationQueueModal({
               />
             </div>
 
-            {/* Status Pago */}
-            <div className="pt-1">
-              <Checkbox
-                label="Transação já liquidada/paga"
-                description="Debita ou credita imediatamente no saldo da carteira"
-                checked={paid}
-                onChange={(val) => setPaid(val)}
-              />
+            {/* Parcelamento & Status Pago */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+              <div>
+                <TextInput
+                  label="Número de Parcelas"
+                  type="number"
+                  min="1"
+                  max="99"
+                  placeholder="1 (À vista) ou ex: 12"
+                  value={totalInstallments}
+                  onChange={(e) => setTotalInstallments(e.target.value)}
+                  leftIcon={<Layers className="w-4 h-4 text-slate-500" />}
+                  badge={installmentPreview ? `${installmentsNum}x de R$ ${installmentPreview}` : undefined}
+                />
+              </div>
+
+              <div className="p-3 sm:p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 flex items-center justify-center">
+                <Checkbox
+                  label="Transação liquidada/paga"
+                  description="Abate imediatamente do saldo da carteira"
+                  checked={paid}
+                  onChange={(val) => setPaid(val)}
+                  align="center"
+                />
+              </div>
             </div>
 
             {/* Footer com botões de ação e fluxo de fila */}
