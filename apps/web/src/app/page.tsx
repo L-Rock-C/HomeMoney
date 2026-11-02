@@ -2557,6 +2557,11 @@ export default function HomePage() {
                               ? 'Investimento'
                               : 'Carteira Física'}
                           </span>
+                          {acc.dueDay && acc.type === 'CHECKING' && (
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium">
+                              Vence dia {acc.dueDay}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

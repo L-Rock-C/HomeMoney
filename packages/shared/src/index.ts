@@ -42,6 +42,7 @@ export interface Account {
   color?: string | null;
   initialBalance: number;
   currentBalance: number;
+  dueDay?: number | null;
   isArchived?: boolean;
   createdAt: string;
 }
@@ -171,6 +172,10 @@ export const createAccountSchema = z.object({
   type: z.nativeEnum(AccountType).default(AccountType.CHECKING),
   color: z.string().optional().nullable(),
   initialBalance: z.number().default(0),
+  dueDay: z.preprocess(
+    (val) => (val === '' || val === undefined || val === null ? null : Number(val)),
+    z.number().int().min(1).max(31).nullable().optional()
+  ),
   isArchived: z.boolean().optional(),
 });
 export type CreateAccountInput = z.infer<typeof createAccountSchema>;
@@ -316,4 +321,3 @@ export interface ContactInvite {
   personName?: string | null;
   createdAt: string;
 }
-

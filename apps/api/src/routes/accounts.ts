@@ -42,6 +42,7 @@ export const accountsRoutes: FastifyPluginAsync = async (app) => {
         color: acc.color,
         isArchived: acc.isArchived,
         initialBalance: acc.initialBalance,
+        dueDay: acc.dueDay,
         currentBalance: Math.round((acc.initialBalance + transactionSum) * 100) / 100,
         createdAt: acc.createdAt.toISOString(),
       };
@@ -56,7 +57,7 @@ export const accountsRoutes: FastifyPluginAsync = async (app) => {
       return reply.status(400).send({ error: parseResult.error.format() });
     }
 
-    const { name, type, color, initialBalance } = parseResult.data;
+    const { name, type, color, initialBalance, dueDay } = parseResult.data;
 
     const existing = await prisma.account.findFirst({
       where: { name, userId },
@@ -64,13 +65,15 @@ export const accountsRoutes: FastifyPluginAsync = async (app) => {
 
     if (existing) {
       if (existing.isArchived) {
+        const effectiveType = type || existing.type;
         const restored = await prisma.account.update({
           where: { id: existing.id },
           data: {
             isArchived: false,
-            type: type || existing.type,
+            type: effectiveType,
             color: color !== undefined ? color : existing.color,
             initialBalance: initialBalance !== undefined ? initialBalance : existing.initialBalance,
+            dueDay: dueDay !== undefined ? (effectiveType === 'CHECKING' ? dueDay : null) : existing.dueDay,
           },
         });
         return reply.status(200).send(restored);
@@ -84,6 +87,7 @@ export const accountsRoutes: FastifyPluginAsync = async (app) => {
         type,
         color,
         initialBalance,
+        dueDay: type === 'CHECKING' ? dueDay : null,
         userId,
       },
     });
@@ -119,9 +123,15 @@ export const accountsRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    const dataToUpdate = { ...parseResult.data };
+    const effectiveType = dataToUpdate.type || current.type;
+    if (effectiveType !== 'CHECKING') {
+      dataToUpdate.dueDay = null;
+    }
+
     const updated = await prisma.account.update({
       where: { id },
-      data: parseResult.data,
+      data: dataToUpdate,
     });
 
     return reply.send(updated);

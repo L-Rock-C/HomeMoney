@@ -126,7 +126,29 @@ export async function fetchAccounts() {
   return res.json();
 }
 
-export async function createAccount(data: { name: string; type?: string; color?: string; initialBalance?: number }) {
+export function formatDueDateWithDay(baseDateStr: string, dueDay: number): string {
+  if (!baseDateStr || !dueDay) return baseDateStr;
+  const parts = baseDateStr.split('-');
+  if (parts.length < 2) return baseDateStr;
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  if (isNaN(year) || isNaN(month)) return baseDateStr;
+
+  const maxDay = new Date(year, month, 0).getDate();
+  const day = Math.min(Math.max(1, dueDay), maxDay);
+
+  const paddedMonth = String(month).padStart(2, '0');
+  const paddedDay = String(day).padStart(2, '0');
+  return `${year}-${paddedMonth}-${paddedDay}`;
+}
+
+export async function createAccount(data: {
+  name: string;
+  type?: string;
+  color?: string;
+  initialBalance?: number;
+  dueDay?: number | null;
+}) {
   const res = await fetch(`${API_BASE}/accounts`, {
     method: 'POST',
     headers: getAuthHeaders(),

@@ -23,6 +23,7 @@ import {
   createCategory,
   createPerson,
   createAccount,
+  formatDueDateWithDay,
 } from '../lib/api';
 import { parseBRLAmount } from '../lib/bankNotificationService';
 import { TextInput, CurrencyInput, Checkbox, SelectDropdown } from './ui/FormControls';
@@ -54,7 +55,12 @@ export function TransactionModal({
 }: TransactionModalProps) {
   const isEditing = Boolean(transactionToEdit);
   const today = new Date().toISOString().split('T')[0];
-  const initialDueDate = defaultMonth ? `${defaultMonth}-05` : today;
+  const defaultAcc = accounts[0];
+  const initialDueDate = defaultAcc?.dueDay
+    ? formatDueDateWithDay(defaultMonth || today, defaultAcc.dueDay)
+    : defaultMonth
+      ? `${defaultMonth}-05`
+      : today;
 
   // Form states
   const [type, setType] = useState<'EXPENSE' | 'INCOME' | 'REIMBURSEMENT'>('EXPENSE');
@@ -78,6 +84,7 @@ export function TransactionModal({
   const [showQuickAccount, setShowQuickAccount] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountType, setNewAccountType] = useState('CHECKING');
+  const [newAccountDueDay, setNewAccountDueDay] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,10 +109,16 @@ export function TransactionModal({
       setDescription('');
       setAmount('');
       setPurchaseDate(today);
-      setDueDate(initialDueDate);
+      const firstAcc = accounts[0];
+      const initialDue = firstAcc?.dueDay
+        ? formatDueDateWithDay(defaultMonth || today, firstAcc.dueDay)
+        : defaultMonth
+          ? `${defaultMonth}-05`
+          : today;
+      setDueDate(initialDue);
       setPaid(false);
       setPaymentMethod('Crédito');
-      setAccountId(accounts[0]?.id || '');
+      setAccountId(firstAcc?.id || '');
       setCategoryId(categories[0]?.id || '');
       setPersonId('');
       setTotalInstallments(1);
@@ -115,9 +128,20 @@ export function TransactionModal({
     setShowQuickCategory(false);
     setShowQuickPerson(false);
     setShowQuickAccount(false);
+    setNewAccountDueDay('');
   }, [transactionToEdit, isOpen]);
 
   if (!isOpen) return null;
+
+  // Auto pre-fill due date when user selects an account with a defined dueDay
+  function handleAccountChange(newAccId: string) {
+    setAccountId(newAccId);
+    const selected = accounts.find((a) => a.id === newAccId);
+    if (selected?.dueDay) {
+      const baseDate = dueDate || purchaseDate || defaultMonth || today;
+      setDueDate(formatDueDateWithDay(baseDate, selected.dueDay));
+    }
+  }
 
   // Inline Quick Add Handlers
   async function handleQuickAddCategory(e: React.MouseEvent) {
@@ -152,10 +176,23 @@ export function TransactionModal({
     e.preventDefault();
     if (!newAccountName.trim()) return;
     try {
-      const created = await createAccount({ name: newAccountName.trim(), type: newAccountType });
+      const parsedDueDay =
+        newAccountType === 'CHECKING' && newAccountDueDay.trim()
+          ? parseInt(newAccountDueDay, 10)
+          : null;
+      const created = await createAccount({
+        name: newAccountName.trim(),
+        type: newAccountType,
+        dueDay: parsedDueDay,
+      });
       if (onReloadAuxiliaryData) onReloadAuxiliaryData();
       setAccountId(created.id);
+      if (created.dueDay) {
+        const baseDate = dueDate || purchaseDate || defaultMonth || today;
+        setDueDate(formatDueDateWithDay(baseDate, created.dueDay));
+      }
       setNewAccountName('');
+      setNewAccountDueDay('');
       setShowQuickAccount(false);
     } catch (err: any) {
       setError(err.message || 'Falha ao adicionar carteira rápida');
@@ -218,6 +255,7 @@ export function TransactionModal({
   const numAmount = parseBRLAmount(amount);
   const installmentsNum = Math.max(1, parseInt(String(totalInstallments), 10) || 1);
   const installmentPreview = installmentsNum > 1 && numAmount > 0 ? (numAmount / installmentsNum).toFixed(2).replace('.', ',') : null;
+  const currentSelectedAccount = accounts.find((a) => a.id === accountId);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
@@ -257,11 +295,10 @@ export function TransactionModal({
               <button
                 type="button"
                 onClick={() => setType('EXPENSE')}
-                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition ${
-                  type === 'EXPENSE'
+                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition ${type === 'EXPENSE'
                     ? 'bg-white dark:bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-slate-200 dark:border-rose-500/30 shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
+                  }`}
               >
                 <ArrowDownRight className="w-4 h-4 text-rose-500" />
                 Despesa
@@ -269,11 +306,10 @@ export function TransactionModal({
               <button
                 type="button"
                 onClick={() => setType('INCOME')}
-                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition ${
-                  type === 'INCOME'
+                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition ${type === 'INCOME'
                     ? 'bg-white dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-slate-200 dark:border-emerald-500/30 shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
+                  }`}
               >
                 <ArrowUpRight className="w-4 h-4 text-emerald-500" />
                 Receita
@@ -281,11 +317,10 @@ export function TransactionModal({
               <button
                 type="button"
                 onClick={() => setType('REIMBURSEMENT')}
-                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition ${
-                  type === 'REIMBURSEMENT'
+                className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition ${type === 'REIMBURSEMENT'
                     ? 'bg-white dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-slate-200 dark:border-amber-500/30 shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
+                  }`}
               >
                 <Repeat className="w-4 h-4 text-amber-500" />
                 A Reembolsar
@@ -336,6 +371,14 @@ export function TransactionModal({
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 leftIcon={<Calendar className="w-4 h-4 text-amber-500" />}
+                badge={
+                  currentSelectedAccount?.dueDay ? `Conta: dia ${currentSelectedAccount.dueDay}` : undefined
+                }
+                helperText={
+                  currentSelectedAccount?.dueDay
+                    ? `Preenchido com o vencimento padrão da conta (dia ${currentSelectedAccount.dueDay}). Você pode alterar livremente.`
+                    : undefined
+                }
               />
             </div>
           </div>
@@ -433,6 +476,18 @@ export function TransactionModal({
                       <option value="SAVINGS">Poupança</option>
                       <option value="WALLET">Carteira</option>
                     </select>
+                    {newAccountType === 'CHECKING' && (
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        placeholder="Venc."
+                        title="Dia de vencimento da conta (1-31)"
+                        value={newAccountDueDay}
+                        onChange={(e) => setNewAccountDueDay(e.target.value)}
+                        className="w-14 px-1.5 py-1 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-white focus:outline-none text-center"
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={handleQuickAddAccount}
@@ -459,11 +514,11 @@ export function TransactionModal({
                   </div>
                   <SelectDropdown
                     value={accountId}
-                    onChange={(e) => setAccountId(e.target.value)}
+                    onChange={(e) => handleAccountChange(e.target.value)}
                   >
                     {accounts.map((a) => (
                       <option key={a.id} value={a.id}>
-                        {a.name} ({a.type === 'SAVINGS' ? 'Poupança/Caixinha' : a.type === 'CHECKING' ? 'Principal' : 'Carteira'})
+                        {a.name} ({a.type === 'SAVINGS' ? 'Poupança/Caixinha' : a.type === 'CHECKING' ? 'Principal' : 'Carteira'}{a.dueDay ? ` • Venc. dia ${a.dueDay}` : ''})
                       </option>
                     ))}
                   </SelectDropdown>
@@ -596,7 +651,7 @@ export function TransactionModal({
           {/* Notes */}
           <div>
             <TextInput
-              label="Observações (opcional)"
+              label="Observações / Detalhes (Opcional)"
               placeholder="Ex: Adiantamento para o Pai, comprado na promoção..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}

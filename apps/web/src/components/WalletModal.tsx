@@ -10,6 +10,7 @@ import {
   Trash2,
   Check,
   Sparkles,
+  Calendar,
 } from 'lucide-react';
 import { createAccount, updateAccount, deleteAccount } from '../lib/api';
 import { parseBRLAmount } from '../lib/bankNotificationService';
@@ -76,6 +77,7 @@ export function WalletModal({
   const [type, setType] = useState('SAVINGS');
   const [initialBalance, setInitialBalance] = useState('0,00');
   const [color, setColor] = useState('#10B981');
+  const [dueDay, setDueDay] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -93,11 +95,17 @@ export function WalletModal({
             : '0,00'
         );
         setColor(walletToEdit.color || '#10B981');
+        setDueDay(
+          walletToEdit.dueDay !== undefined && walletToEdit.dueDay !== null
+            ? String(walletToEdit.dueDay)
+            : ''
+        );
       } else {
         setName('');
         setType('SAVINGS');
         setInitialBalance('0,00');
         setColor('#10B981');
+        setDueDay('');
       }
     }
   }, [isOpen, walletToEdit]);
@@ -112,6 +120,13 @@ export function WalletModal({
     }
 
     const cleanBalance = parseBRLAmount(initialBalance);
+    const parsedDueDay = type === 'CHECKING' && dueDay.trim() ? parseInt(dueDay, 10) : null;
+    if (type === 'CHECKING' && dueDay.trim()) {
+      if (isNaN(parsedDueDay!) || parsedDueDay! < 1 || parsedDueDay! > 31) {
+        setError('O dia de vencimento deve ser um número válido entre 1 e 31.');
+        return;
+      }
+    }
 
     setLoading(true);
     setError(null);
@@ -123,6 +138,7 @@ export function WalletModal({
           type,
           color,
           initialBalance: cleanBalance,
+          dueDay: parsedDueDay,
         });
       } else {
         await createAccount({
@@ -130,6 +146,7 @@ export function WalletModal({
           type,
           color,
           initialBalance: cleanBalance,
+          dueDay: parsedDueDay,
         });
       }
       onSuccess();
@@ -248,6 +265,27 @@ export function WalletModal({
               })}
             </div>
           </div>
+
+          {/* Vencimento (Apenas para Conta Corrente) */}
+          {type === 'CHECKING' && (
+            <div className="space-y-1.5 animate-in fade-in duration-200">
+              <TextInput
+                label="Dia do Vencimento Padrão (Opcional)"
+                type="number"
+                min="1"
+                max="31"
+                placeholder="Ex: 10 (Dia 10 de cada mês)"
+                value={dueDay}
+                onChange={(e) => setDueDay(e.target.value)}
+                leftIcon={<Calendar className="w-4 h-4 text-amber-500" />}
+                badge={
+                  dueDay && parseInt(dueDay, 10) >= 1 && parseInt(dueDay, 10) <= 31
+                    ? `Todo dia ${dueDay}`
+                    : undefined
+                }
+              />
+            </div>
+          )}
 
           {/* Saldo Inicial */}
           <CurrencyInput
