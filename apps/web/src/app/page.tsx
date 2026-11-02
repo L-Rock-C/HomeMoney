@@ -63,6 +63,12 @@ import {
   clearAuthToken,
   fetchPendingTransfers,
   TransferNotificationItem,
+  getCurrentMonthKey,
+  formatMonthYearLabel,
+  getAdjacentMonthKey,
+  formatDateBRL,
+  formatDateBRLShort,
+  type InstallmentScope,
 } from '../lib/api';
 import { TransactionModal } from '../components/TransactionModal';
 import { SettleModal } from '../components/SettleModal';
@@ -93,28 +99,7 @@ import {
   openAndroidNotificationSettings,
 } from '../lib/bankNotificationService';
 
-const getCurrentMonthKey = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-};
-
-const MONTH_NAMES_SHORT = [
-  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
-  'jul', 'ago', 'set', 'out', 'nov', 'dez'
-];
-
-const formatMonthYearLabel = (monthKey: string) => {
-  if (!monthKey) return '';
-  const parts = monthKey.split('-');
-  if (parts.length === 2) {
-    const year = parts[0];
-    const monthIdx = parseInt(parts[1], 10) - 1;
-    if (monthIdx >= 0 && monthIdx < 12) {
-      return `${MONTH_NAMES_SHORT[monthIdx]}/${year}`;
-    }
-  }
-  return monthKey;
-};
+// Date helpers are imported centrally from @homemoney/shared via ../lib/api
 
 // ============================================================================
 // Local Persistence Cache (Stale-While-Revalidate com isolamento por usuário)
@@ -246,6 +231,11 @@ export default function HomePage() {
   const [personFilter, setPersonFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PAID' | 'PENDING'>('ALL');
   const [showFilterModal, setShowFilterModal] = useState(false);
+
+  // Pagination & Installment Action states
+  const [deleteInstallmentTarget, setDeleteInstallmentTarget] = useState<any | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(50);
 
   // Core Data
   const [monthlyReports, setMonthlyReports] = useState<any[]>([]);
@@ -614,6 +604,7 @@ export default function HomePage() {
     setFilterMode('MONTH');
     setStartDate('');
     setEndDate('');
+    setCurrentPage(1);
     if (!availableMonths.includes(month)) {
       setAvailableMonths((prev) => Array.from(new Set([...prev, month])).sort());
     }
@@ -621,34 +612,19 @@ export default function HomePage() {
   }
 
   function handlePrevMonth() {
-    const [yearStr, monthStr] = (selectedMonth || getCurrentMonthKey()).split('-');
-    let year = parseInt(yearStr, 10);
-    let month = parseInt(monthStr, 10);
-    month -= 1;
-    if (month < 1) {
-      month = 12;
-      year -= 1;
-    }
-    const prevMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+    const prevMonthKey = getAdjacentMonthKey(selectedMonth || getCurrentMonthKey(), -1);
     handleMonthSelect(prevMonthKey);
   }
 
   function handleNextMonth() {
-    const [yearStr, monthStr] = (selectedMonth || getCurrentMonthKey()).split('-');
-    let year = parseInt(yearStr, 10);
-    let month = parseInt(monthStr, 10);
-    month += 1;
-    if (month > 12) {
-      month = 1;
-      year += 1;
-    }
-    const nextMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+    const nextMonthKey = getAdjacentMonthKey(selectedMonth || getCurrentMonthKey(), 1);
     handleMonthSelect(nextMonthKey);
   }
 
   async function handleApplyDateRange() {
     if (!startDate && !endDate) return;
     setFilterMode('RANGE');
+    setCurrentPage(1);
     await fetchTransactionsForFilter(undefined, startDate, endDate);
   }
 
@@ -656,6 +632,7 @@ export default function HomePage() {
     setStartDate('');
     setEndDate('');
     setFilterMode('MONTH');
+    setCurrentPage(1);
     fetchTransactionsForFilter(selectedMonth, '', '');
   }
 
@@ -680,10 +657,10 @@ export default function HomePage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('Deseja excluir esta transação?')) return;
+  async function executeDelete(id: string, scope?: InstallmentScope) {
     try {
-      await deleteTransaction(id);
+      await deleteTransaction(id, scope);
+      setDeleteInstallmentTarget(null);
       const filterRes = await fetchTransactionsForFilter(filterMode === 'MONTH' ? selectedMonth : undefined, startDate, endDate);
       const updatedMonths = await fetchMonthlyReports();
       setMonthlyReports(updatedMonths);
@@ -697,8 +674,21 @@ export default function HomePage() {
         monthlyReports: updatedMonths,
         accounts: updatedAccs,
       }, activeUid);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(err.message || 'Erro ao excluir transação');
+    }
+  }
+
+  async function handleDelete(idOrTx: string | any): Promise<void> {
+    const target = typeof idOrTx === 'string' ? transactions.find((t) => t.id === idOrTx) : idOrTx;
+    if (!target) return;
+
+    if (target.installmentGroupId && ((target.totalInstallments && target.totalInstallments > 1) || target.currentInstallment)) {
+      setDeleteInstallmentTarget(target);
+    } else {
+      if (!confirm('Deseja excluir esta transação?')) return;
+      await executeDelete(target.id, 'SINGLE');
     }
   }
 
@@ -737,6 +727,14 @@ export default function HomePage() {
 
     return matchesSearch && matchesType && matchesAccount && matchesPerson && matchesStatus;
   });
+
+  // Pagination calculations
+  const totalItems = filteredTransactions.length;
+  const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(totalItems / pageSize)) : 1;
+  const effectivePage = Math.min(currentPage, totalPages);
+  const startIndex = pageSize > 0 ? (effectivePage - 1) * pageSize : 0;
+  const endIndex = pageSize > 0 ? Math.min(startIndex + pageSize, totalItems) : totalItems;
+  const paginatedTransactions = pageSize > 0 ? filteredTransactions.slice(startIndex, endIndex) : filteredTransactions;
 
   const activeFilterCount =
     (accountFilter !== 'ALL' ? 1 : 0) +
@@ -1971,7 +1969,7 @@ export default function HomePage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
-                      {filteredTransactions.map((t) => (
+                      {paginatedTransactions.map((t) => (
                         <tr key={t.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition">
                           <td className="py-3 px-4 whitespace-nowrap">
                             <button
@@ -2043,8 +2041,8 @@ export default function HomePage() {
                                 <Edit2 className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => handleDelete(t.id)}
-                                className="p-1 rounded text-slate-400 hover:text-rose-500 transition"
+                                onClick={() => handleDelete(t)}
+                                className="p-1 rounded text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition cursor-pointer"
                                 title="Excluir"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -2134,7 +2132,7 @@ export default function HomePage() {
 
                 {/* Mobile View: Compact rows with 100% width and tap-to-open detail modal */}
                 <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800/80">
-                  {filteredTransactions.map((t) => {
+                  {paginatedTransactions.map((t) => {
                     const isIncome = t.type === 'INCOME';
                     return (
                       <div
@@ -2253,6 +2251,58 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Pagination Controls */}
+                {totalItems > 0 && (
+                  <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400">
+                    <div className="flex items-center gap-3">
+                      <span>
+                        Exibindo <span className="font-semibold text-slate-900 dark:text-white">{totalItems === 0 ? 0 : startIndex + 1}–{endIndex}</span> de{' '}
+                        <span className="font-semibold text-slate-900 dark:text-white">{totalItems}</span> lançamentos
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-400">Por página:</span>
+                        <select
+                          value={pageSize}
+                          onChange={(e) => {
+                            setPageSize(Number(e.target.value));
+                            setCurrentPage(1);
+                          }}
+                          className="px-2 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200 text-xs focus:outline-none focus:border-emerald-500 cursor-pointer"
+                        >
+                          <option value={25}>25</option>
+                          <option value={50}>50</option>
+                          <option value={100}>100</option>
+                          <option value={0}>Todos</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {totalPages > 1 && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={effectivePage <= 1}
+                          className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+                        >
+                          Anterior
+                        </button>
+                        <span className="px-2.5 py-1 text-slate-500 dark:text-slate-400 font-medium">
+                          Página {effectivePage} de {totalPages}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={effectivePage >= totalPages}
+                          className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+                        >
+                          Próxima
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -2783,6 +2833,82 @@ export default function HomePage() {
         }}
         formatBRL={formatBRL}
       />
+
+      {/* Modal de confirmação de exclusão de parcelamento */}
+      {deleteInstallmentTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  Excluir Parcela
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {deleteInstallmentTarget.description}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-800 dark:text-amber-300">
+              Esta transação faz parte de um parcelamento (parcela {deleteInstallmentTarget.currentInstallment || 1} de {deleteInstallmentTarget.totalInstallments || 1}). O que você deseja excluir?
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => executeDelete(deleteInstallmentTarget.id, 'SINGLE')}
+                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 hover:border-emerald-500/50 hover:bg-emerald-500/5 text-left transition cursor-pointer"
+              >
+                <div className="text-xs font-bold text-slate-900 dark:text-white">
+                  Apenas esta parcela ({deleteInstallmentTarget.currentInstallment || 1}/{deleteInstallmentTarget.totalInstallments || 1})
+                </div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Mantém todas as outras parcelas inalteradas.
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => executeDelete(deleteInstallmentTarget.id, 'FUTURE')}
+                className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 hover:border-amber-500/50 hover:bg-amber-500/5 text-left transition cursor-pointer"
+              >
+                <div className="text-xs font-bold text-slate-900 dark:text-white">
+                  Esta e as próximas parcelas
+                </div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Exclui a partir da parcela {deleteInstallmentTarget.currentInstallment || 1} em diante.
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => executeDelete(deleteInstallmentTarget.id, 'ALL')}
+                className="w-full p-3 rounded-xl border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10 hover:border-rose-500/40 text-left transition cursor-pointer"
+              >
+                <div className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                  Todas as parcelas do parcelamento
+                </div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Remove todo o grupo deste parcelamento ({deleteInstallmentTarget.totalInstallments || 1} parcelas).
+                </div>
+              </button>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setDeleteInstallmentTarget(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Outros Filtros de Transações */}
       {showFilterModal && (

@@ -75,6 +75,7 @@ export function TransactionModal({
   const [personId, setPersonId] = useState('');
   const [totalInstallments, setTotalInstallments] = useState<number | string>(1);
   const [notes, setNotes] = useState('');
+  const [installmentScope, setInstallmentScope] = useState<'SINGLE' | 'FUTURE' | 'ALL'>('SINGLE');
 
   // Quick Add states
   const [showQuickCategory, setShowQuickCategory] = useState(false);
@@ -104,6 +105,7 @@ export function TransactionModal({
       setPersonId(transactionToEdit.personId || '');
       setTotalInstallments(transactionToEdit.totalInstallments || 1);
       setNotes(transactionToEdit.notes || '');
+      setInstallmentScope('SINGLE');
     } else {
       setType('EXPENSE');
       setDescription('');
@@ -123,6 +125,7 @@ export function TransactionModal({
       setPersonId('');
       setTotalInstallments(1);
       setNotes('');
+      setInstallmentScope('SINGLE');
     }
     setError(null);
     setShowQuickCategory(false);
@@ -213,19 +216,23 @@ export function TransactionModal({
       const installmentsNum = Math.max(1, parseInt(String(totalInstallments), 10) || 1);
 
       if (isEditing && transactionToEdit) {
-        await updateTransaction(transactionToEdit.id, {
-          description,
-          amount: numAmount,
-          type,
-          purchaseDate,
-          dueDate,
-          paid,
-          paymentMethod,
-          accountId: accountId || accounts[0]?.id,
-          categoryId: categoryId || categories[0]?.id,
-          personId: personId || null,
-          notes: notes || null,
-        });
+        await updateTransaction(
+          transactionToEdit.id,
+          {
+            description,
+            amount: numAmount,
+            type,
+            purchaseDate,
+            dueDate,
+            paid,
+            paymentMethod,
+            accountId: accountId || accounts[0]?.id,
+            categoryId: categoryId || categories[0]?.id,
+            personId: personId || null,
+            notes: notes || null,
+          },
+          transactionToEdit.installmentGroupId ? installmentScope : undefined
+        );
       } else {
         await createTransaction({
           description,
@@ -283,6 +290,54 @@ export function TransactionModal({
           {error && (
             <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-600 dark:text-rose-400 text-sm">
               {error}
+            </div>
+          )}
+
+          {/* Installment Scope Banner when editing an installment group */}
+          {isEditing && transactionToEdit?.installmentGroupId && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-2xl space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                <Layers className="w-4 h-4 text-amber-500" />
+                <span>Esta transação é a parcela {transactionToEdit.currentInstallment || 1} de {transactionToEdit.totalInstallments || 1}.</span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                Escolha o alcance para propagar categoria, carteira, contato e observações:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setInstallmentScope('SINGLE')}
+                  className={`px-2.5 py-1.5 text-xs rounded-xl border text-center transition cursor-pointer ${
+                    installmentScope === 'SINGLE'
+                      ? 'bg-white dark:bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500/50 font-bold shadow-sm'
+                      : 'bg-white/60 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  Apenas esta parcela
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInstallmentScope('FUTURE')}
+                  className={`px-2.5 py-1.5 text-xs rounded-xl border text-center transition cursor-pointer ${
+                    installmentScope === 'FUTURE'
+                      ? 'bg-white dark:bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500/50 font-bold shadow-sm'
+                      : 'bg-white/60 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  Esta e as próximas
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInstallmentScope('ALL')}
+                  className={`px-2.5 py-1.5 text-xs rounded-xl border text-center transition cursor-pointer ${
+                    installmentScope === 'ALL'
+                      ? 'bg-white dark:bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500/50 font-bold shadow-sm'
+                      : 'bg-white/60 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800'
+                  }`}
+                >
+                  Todas as parcelas
+                </button>
+              </div>
             </div>
           )}
 
@@ -370,20 +425,12 @@ export function TransactionModal({
                 required
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                leftIcon={<Calendar className="w-4 h-4 text-amber-500" />}
-                badge={
-                  currentSelectedAccount?.dueDay ? `Conta: dia ${currentSelectedAccount.dueDay}` : undefined
-                }
-                helperText={
-                  currentSelectedAccount?.dueDay
-                    ? `Preenchido com o vencimento padrão da conta (dia ${currentSelectedAccount.dueDay}). Você pode alterar livremente.`
-                    : undefined
-                }
+                leftIcon={<Calendar className="w-4 h-4 text-slate-500" />}
               />
             </div>
           </div>
 
-          {/* Category & Carteira/Conta with Quick Add */}
+          {/* Category & Account */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* Category with Quick Add */}
             <div>
@@ -445,7 +492,7 @@ export function TransactionModal({
               )}
             </div>
 
-            {/* Carteira / Poupança with Quick Add */}
+            {/* Account / Wallet with Quick Add */}
             <div>
               {showQuickAccount ? (
                 <div className="space-y-1">

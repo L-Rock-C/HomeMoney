@@ -1,5 +1,6 @@
 import fastify from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import dotenv from 'dotenv';
@@ -44,6 +45,17 @@ async function main() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
+  // Global Rate Limiting
+  await app.register(rateLimit, {
+    max: 120,
+    timeWindow: '1 minute',
+    errorResponseBuilder: (request, context) => ({
+      statusCode: 429,
+      error: 'Too Many Requests',
+      message: `Limite de requisições excedido. Tente novamente em ${Math.ceil(context.ttl / 1000)} segundos.`,
+    }),
+  });
+
   // Swagger OpenAPI documentation
   await app.register(swagger, {
     openapi: {
@@ -73,6 +85,7 @@ async function main() {
   app.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };
   });
+
   // API Routes
   await app.register(authRoutes, { prefix: '/auth' });
   await app.register(accountsRoutes, { prefix: '/accounts' });
@@ -91,8 +104,8 @@ async function main() {
   try {
     await ensureUserData();
     await app.listen({ port, host });
-    console.log(`🚀 HomeMoney API running at http://localhost:${port}`);
-    console.log(`📚 Swagger documentation at http://localhost:${port}/docs`);
+    console.log(`HomeMoney API running at http://localhost:${port}`);
+    console.log(`Swagger documentation at http://localhost:${port}/docs`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);

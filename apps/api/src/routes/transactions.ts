@@ -178,16 +178,18 @@ export const transactionsRoutes: FastifyPluginAsync = async (app) => {
     return reply.send(updated);
   });
 
-  // Update transaction (Full Edit)
+  // Update transaction (Full Edit, with optional scope for installments)
   app.patch('/:id', async (request, reply) => {
     const userId = await getRequestUserId(request);
     const { id } = request.params as { id: string };
+    const query = request.query as { scope?: 'SINGLE' | 'FUTURE' | 'ALL' };
     const current = await prisma.transaction.findFirst({ where: { id, userId } });
     if (!current) {
       return reply.status(404).send({ error: 'Transação não encontrada' });
     }
 
     const body = request.body as any;
+    const scope = body.scope || query.scope || 'SINGLE';
 
     const data: any = {};
     if (body.description !== undefined) data.description = body.description;
@@ -202,23 +204,100 @@ export const transactionsRoutes: FastifyPluginAsync = async (app) => {
     if (body.categoryId !== undefined) data.categoryId = body.categoryId;
     if (body.personId !== undefined) data.personId = body.personId || null;
 
+    // Update target transaction
     const updated = await prisma.transaction.update({
       where: { id },
       data,
       include: { account: true, category: true, person: true },
     });
 
+    // If part of an installment group and scope is FUTURE or ALL, propagate common attributes
+    if (current.installmentGroupId && (scope === 'FUTURE' || scope === 'ALL')) {
+      const commonUpdate: any = {};
+      if (body.categoryId !== undefined) commonUpdate.categoryId = body.categoryId;
+      if (body.accountId !== undefined) commonUpdate.accountId = body.accountId;
+      if (body.paymentMethod !== undefined) commonUpdate.paymentMethod = body.paymentMethod;
+      if (body.notes !== undefined) commonUpdate.notes = body.notes;
+      if (body.personId !== undefined) commonUpdate.personId = body.personId || null;
+
+      // Extract base description if provided to preserve (X/N) format for siblings
+      let baseDescription: string | null = null;
+      if (body.description !== undefined) {
+        baseDescription = body.description.replace(/\s*\(\d+\/\d+\)$/, '').trim();
+      }
+
+      const whereGroup: any = {
+        installmentGroupId: current.installmentGroupId,
+        userId,
+        id: { not: id },
+      };
+
+      if (scope === 'FUTURE') {
+        const currentInst = current.currentInstallment || 1;
+        whereGroup.currentInstallment = { gt: currentInst };
+      }
+
+      if (Object.keys(commonUpdate).length > 0) {
+        await prisma.transaction.updateMany({
+          where: whereGroup,
+          data: commonUpdate,
+        });
+      }
+
+      if (baseDescription) {
+        const siblings = await prisma.transaction.findMany({
+          where: whereGroup,
+          select: { id: true, currentInstallment: true, totalInstallments: true },
+        });
+
+        for (const sibling of siblings) {
+          const newDesc = `${baseDescription} (${sibling.currentInstallment || 1}/${sibling.totalInstallments || current.totalInstallments || 1})`;
+          await prisma.transaction.update({
+            where: { id: sibling.id },
+            data: { description: newDesc },
+          });
+        }
+      }
+    }
+
     return reply.send(updated);
   });
 
-  // Delete transaction
+  // Delete transaction (supports scope for installments)
   app.delete('/:id', async (request, reply) => {
     const userId = await getRequestUserId(request);
     const { id } = request.params as { id: string };
+    const { scope } = (request.query as { scope?: 'SINGLE' | 'FUTURE' | 'ALL' }) || {};
+
     const current = await prisma.transaction.findFirst({ where: { id, userId } });
     if (!current) {
       return reply.status(404).send({ error: 'Transação não encontrada' });
     }
+
+    if (current.installmentGroupId && scope && scope !== 'SINGLE') {
+      if (scope === 'ALL') {
+        const result = await prisma.transaction.deleteMany({
+          where: {
+            installmentGroupId: current.installmentGroupId,
+            userId,
+          },
+        });
+        return reply.status(200).send({ deletedCount: result.count, scope: 'ALL' });
+      }
+
+      if (scope === 'FUTURE') {
+        const currentInst = current.currentInstallment || 1;
+        const result = await prisma.transaction.deleteMany({
+          where: {
+            installmentGroupId: current.installmentGroupId,
+            userId,
+            currentInstallment: { gte: currentInst },
+          },
+        });
+        return reply.status(200).send({ deletedCount: result.count, scope: 'FUTURE' });
+      }
+    }
+
     await prisma.transaction.delete({ where: { id } });
     return reply.status(204).send();
   });
@@ -236,8 +315,8 @@ export const transactionsRoutes: FastifyPluginAsync = async (app) => {
       where.dueDate = { gte: start, lte: end };
     } else if (body.startDate || body.endDate) {
       where.dueDate = {};
-      if (body.startDate) where.dueDate.gte = new Date(body.startDate + 'T00:00:00Z');
-      if (body.endDate) where.dueDate.lte = new Date(body.endDate + 'T23:59:59Z');
+      if (body.startDate) where.dueDate.gte = new Date(queryDateToISO(body.startDate, '00:00:00Z'));
+      if (body.endDate) where.dueDate.lte = new Date(queryDateToISO(body.endDate, '23:59:59Z'));
     }
 
     if (body.accountId && body.accountId !== 'ALL') where.accountId = body.accountId;
@@ -249,6 +328,10 @@ export const transactionsRoutes: FastifyPluginAsync = async (app) => {
     }
 
     return where;
+  }
+
+  function queryDateToISO(d: string, timeSuffix: string) {
+    return d.includes('T') ? d : `${d}T${timeSuffix}`;
   }
 
   // Preview de exclusão em massa (Zona de Perigo)

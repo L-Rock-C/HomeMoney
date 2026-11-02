@@ -1,4 +1,53 @@
+import {
+  parseDateOnly,
+  formatDateBRL,
+  formatDateBRLShort,
+  getCurrentMonthKey,
+  getTodayDateString,
+  MONTH_NAMES_SHORT,
+  MONTH_NAMES_FULL,
+  formatMonthYearLabel,
+  getAdjacentMonthKey,
+  type InstallmentScope,
+} from '@homemoney/shared';
+
+export {
+  parseDateOnly,
+  formatDateBRL,
+  formatDateBRLShort,
+  getCurrentMonthKey,
+  getTodayDateString,
+  MONTH_NAMES_SHORT,
+  MONTH_NAMES_FULL,
+  formatMonthYearLabel,
+  getAdjacentMonthKey,
+  type InstallmentScope,
+};
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
+
+// ==========================================
+// Offline Resilience / Fallback Storage
+// ==========================================
+
+function getLocalFallback<T>(key: string): T | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setLocalFallback(key: string, data: any) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch {
+    // Ignore storage quota errors
+  }
+}
 
 // ==========================================
 // Authentication
@@ -118,12 +167,20 @@ export async function fetchCategoryReports(month?: string) {
 // ==========================================
 
 export async function fetchAccounts() {
-  const res = await fetch(`${API_BASE}/accounts`, {
-    headers: getAuthHeaders(),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error('Falha ao buscar contas/carteiras');
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}/accounts`, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Falha ao buscar contas/carteiras');
+    const data = await res.json();
+    setLocalFallback('homemoney_offline_accounts', data);
+    return data;
+  } catch (err) {
+    const fallback = getLocalFallback<any[]>('homemoney_offline_accounts');
+    if (fallback) return fallback;
+    throw err;
+  }
 }
 
 export function formatDueDateWithDay(baseDateStr: string, dueDay: number): string {
@@ -192,12 +249,22 @@ export async function deleteAccount(id: string) {
 
 export async function fetchCategories(includeArchived = false) {
   const url = includeArchived ? `${API_BASE}/categories?includeArchived=true` : `${API_BASE}/categories`;
-  const res = await fetch(url, {
-    headers: getAuthHeaders(),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error('Falha ao buscar categorias');
-  return res.json();
+  try {
+    const res = await fetch(url, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Falha ao buscar categorias');
+    const data = await res.json();
+    if (!includeArchived) {
+      setLocalFallback('homemoney_offline_categories', data);
+    }
+    return data;
+  } catch (err) {
+    const fallback = getLocalFallback<any[]>('homemoney_offline_categories');
+    if (fallback) return fallback;
+    throw err;
+  }
 }
 
 export async function createCategory(data: { name: string; icon?: string | null; color?: string | null; isIncome?: boolean }) {
@@ -244,12 +311,22 @@ export async function deleteCategory(id: string) {
 
 export async function fetchPeople(includeArchived = false) {
   const url = includeArchived ? `${API_BASE}/people?includeArchived=true` : `${API_BASE}/people`;
-  const res = await fetch(url, {
-    headers: getAuthHeaders(),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error('Falha ao buscar contatos');
-  return res.json();
+  try {
+    const res = await fetch(url, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Falha ao buscar contatos');
+    const data = await res.json();
+    if (!includeArchived) {
+      setLocalFallback('homemoney_offline_people', data);
+    }
+    return data;
+  } catch (err) {
+    const fallback = getLocalFallback<any[]>('homemoney_offline_people');
+    if (fallback) return fallback;
+    throw err;
+  }
 }
 
 export async function fetchPersonPendingTransactions(personId: string) {
@@ -305,12 +382,22 @@ export async function deletePerson(id: string) {
 
 export async function fetchPaymentMethods(includeArchived = false) {
   const url = includeArchived ? `${API_BASE}/payment-methods?includeArchived=true` : `${API_BASE}/payment-methods`;
-  const res = await fetch(url, {
-    headers: getAuthHeaders(),
-    cache: 'no-store',
-  });
-  if (!res.ok) throw new Error('Falha ao buscar métodos de pagamento');
-  return res.json();
+  try {
+    const res = await fetch(url, {
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Falha ao buscar métodos de pagamento');
+    const data = await res.json();
+    if (!includeArchived) {
+      setLocalFallback('homemoney_offline_payment_methods', data);
+    }
+    return data;
+  } catch (err) {
+    const fallback = getLocalFallback<any[]>('homemoney_offline_payment_methods');
+    if (fallback) return fallback;
+    throw err;
+  }
 }
 
 export async function createPaymentMethod(data: { name: string; icon?: string | null }) {
@@ -396,11 +483,12 @@ export async function createTransaction(data: any) {
   return res.json();
 }
 
-export async function updateTransaction(id: string, data: any) {
-  const res = await fetch(`${API_BASE}/transactions/${id}`, {
+export async function updateTransaction(id: string, data: any, scope?: InstallmentScope) {
+  const url = scope ? `${API_BASE}/transactions/${id}?scope=${scope}` : `${API_BASE}/transactions/${id}`;
+  const res = await fetch(url, {
     method: 'PATCH',
     headers: getAuthHeaders(),
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, scope }),
   });
   if (!res.ok) throw new Error('Falha ao atualizar transação');
   return res.json();
@@ -415,8 +503,9 @@ export async function toggleTransactionPaid(id: string) {
   return res.json();
 }
 
-export async function deleteTransaction(id: string) {
-  const res = await fetch(`${API_BASE}/transactions/${id}`, {
+export async function deleteTransaction(id: string, scope?: InstallmentScope) {
+  const url = scope ? `${API_BASE}/transactions/${id}?scope=${scope}` : `${API_BASE}/transactions/${id}`;
+  const res = await fetch(url, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   });
@@ -727,6 +816,3 @@ export async function generateRecurringForMonth(month: string) {
     transactions: any[];
   }>;
 }
-
-
-

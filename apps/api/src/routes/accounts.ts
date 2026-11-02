@@ -13,27 +13,37 @@ export const accountsRoutes: FastifyPluginAsync = async (app) => {
       where.isArchived = false;
     }
 
-    const accounts = await prisma.account.findMany({
-      where,
-      include: {
-        transactions: {
-          select: {
-            amount: true,
-            type: true,
-            paid: true,
-          },
+    const [accounts, balanceGroups] = await Promise.all([
+      prisma.account.findMany({
+        where,
+        orderBy: { name: 'asc' },
+      }),
+      prisma.transaction.groupBy({
+        by: ['accountId', 'type'],
+        where: {
+          userId,
+          paid: true,
         },
-      },
-      orderBy: { name: 'asc' },
-    });
+        _sum: {
+          amount: true,
+        },
+      }),
+    ]);
+
+    const balanceMap = new Map<string, number>();
+    for (const group of balanceGroups) {
+      if (!group.accountId) continue;
+      const current = balanceMap.get(group.accountId) || 0;
+      const amount = group._sum.amount || 0;
+      if (group.type === 'INCOME') {
+        balanceMap.set(group.accountId, current + amount);
+      } else if (group.type === 'EXPENSE' || group.type === 'REIMBURSEMENT') {
+        balanceMap.set(group.accountId, current - amount);
+      }
+    }
 
     return accounts.map((acc) => {
-      const transactionSum = acc.transactions.reduce((sum, t) => {
-        if (!t.paid) return sum;
-        if (t.type === 'INCOME') return sum + t.amount;
-        if (t.type === 'EXPENSE' || t.type === 'REIMBURSEMENT') return sum - t.amount;
-        return sum;
-      }, 0);
+      const transactionSum = balanceMap.get(acc.id) || 0;
 
       return {
         id: acc.id,

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // ==========================================
-// Enums
+// Enums & Scopes
 // ==========================================
 
 export const TransactionType = {
@@ -30,6 +30,8 @@ export const AccountType = {
   CREDIT_CARD: 'CREDIT_CARD', // Cartão
 } as const;
 export type AccountType = typeof AccountType[keyof typeof AccountType];
+
+export type InstallmentScope = 'SINGLE' | 'FUTURE' | 'ALL';
 
 // ==========================================
 // Domain Models (Interfaces)
@@ -138,7 +140,6 @@ export interface RecurringTransaction {
   updatedAt: string;
 }
 
-
 export interface MonthlyBalance {
   month: string; // YYYY-MM
   totalIncome: number;
@@ -231,7 +232,9 @@ export const createTransactionSchema = z.object({
 });
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 
-export const updateTransactionSchema = createTransactionSchema.partial();
+export const updateTransactionSchema = createTransactionSchema.partial().extend({
+  scope: z.enum(['SINGLE', 'FUTURE', 'ALL']).optional(),
+});
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
 
 export const createRecurringTransactionSchema = z.object({
@@ -254,7 +257,6 @@ export const updateRecurringTransactionSchema = createRecurringTransactionSchema
   status: z.enum(['ACTIVE', 'PAUSED', 'CANCELED']).optional(),
 });
 export type UpdateRecurringTransactionInput = z.infer<typeof updateRecurringTransactionSchema>;
-
 
 export const settleDebtSchema = z.object({
   personId: z.string().min(1, 'Pessoa é obrigatória'),
@@ -320,4 +322,105 @@ export interface ContactInvite {
   personId?: string | null;
   personName?: string | null;
   createdAt: string;
+}
+
+// ==========================================
+// Centralized Safe Date Utilities (UTC-Safe)
+// ==========================================
+
+export const MONTH_NAMES_SHORT = [
+  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+  'jul', 'ago', 'set', 'out', 'nov', 'dez'
+] as const;
+
+export const MONTH_NAMES_FULL = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+] as const;
+
+/**
+ * Safely parses a "YYYY-MM-DD" string into year, month (1-indexed), day
+ * without timezone offset shifts.
+ */
+export function parseDateOnly(dateStr: string | null | undefined): { year: number; month: number; day: number } | null {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  const clean = dateStr.slice(0, 10);
+  const parts = clean.split('-');
+  if (parts.length !== 3) return null;
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+  return { year, month, day };
+}
+
+/**
+ * Formats a "YYYY-MM-DD" or ISO string to Brazilian format "DD/MM/YYYY" safely without timezone shifts.
+ */
+export function formatDateBRL(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  const parsed = parseDateOnly(dateStr);
+  if (!parsed) return '';
+  const { year, month, day } = parsed;
+  return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+}
+
+/**
+ * Formats a "YYYY-MM-DD" or ISO string to Brazilian short format "DD/MM" safely without timezone shifts.
+ */
+export function formatDateBRLShort(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  const parsed = parseDateOnly(dateStr);
+  if (!parsed) return '';
+  const { month, day } = parsed;
+  return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+}
+
+/**
+ * Returns the current month key "YYYY-MM" in local timezone.
+ */
+export function getCurrentMonthKey(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/**
+ * Returns today's date "YYYY-MM-DD" in local timezone.
+ */
+export function getTodayDateString(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Formats "YYYY-MM" into short label e.g. "mar/2026"
+ */
+export function formatMonthYearLabel(monthKey: string): string {
+  if (!monthKey) return '';
+  const parts = monthKey.split('-');
+  if (parts.length === 2) {
+    const year = parts[0];
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    if (monthIdx >= 0 && monthIdx < 12) {
+      return `${MONTH_NAMES_SHORT[monthIdx]}/${year}`;
+    }
+  }
+  return monthKey;
+}
+
+/**
+ * Gets previous or next month key safely (e.g. delta = -1 or +1).
+ */
+export function getAdjacentMonthKey(monthKey: string, delta: -1 | 1): string {
+  const parts = (monthKey || getCurrentMonthKey()).split('-');
+  let year = parseInt(parts[0], 10);
+  let month = parseInt(parts[1], 10) + delta;
+  if (month < 1) {
+    month = 12;
+    year -= 1;
+  } else if (month > 12) {
+    month = 1;
+    year += 1;
+  }
+  return `${year}-${String(month).padStart(2, '0')}`;
 }
